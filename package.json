@@ -1,0 +1,24 @@
+{
+  "name": "viewer-3-attribute-data-collection",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.html",
+  "scripts": {
+    "start": "parcel index.html --open",
+    "build": "parcel build index.html"
+  },
+  "dependencies": {
+    "@shapediver/viewer": "2.9.5",
+    "@shapediver/viewer.features.interaction": "^2.9.5",
+    "parcel-bundler": "^1.6.1",
+    "three": "^0.154.0",
+    "three-mesh-bvh": "0.6.1"
+  },
+  "devDependencies": {
+    "typescript": "4.2.3"
+  },
+  "resolutions": {
+    "@babel/preset-env": "7.13.8"
+  },
+  "keywords": []
+}
