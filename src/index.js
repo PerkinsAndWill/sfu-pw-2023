@@ -26,6 +26,8 @@ import {
   sceneTree,
 } from "@shapediver/viewer";
 
+import * as tf from '@tensorflow/tfjs';
+
 // ------------ Model specific variables ------------------
 const mapNames = [
   "depth map",
@@ -52,8 +54,16 @@ var shapediverViewport;
 var shapediverSession;
 var isLoading = false;
 var geomDict = {};
+var daModel;
+
 
 (async () => {
+
+  // ------------ Load surrogate models -------------------
+    tf.loadLayersModel("da_model/model.json").then((model) => {
+      daModel = model;
+    })
+
   //  -------  Setting up ShapeDiver -----------
   await createSession({
     ticket:
@@ -152,6 +162,8 @@ var geomDict = {};
       (o) => o.name === "finSpacing"
     ).content[0].data;
 
+    const inputsReadyTime = window.performance.now();
+
     const output = raycasting(
       simNumber,
       resHeight,
@@ -174,10 +186,25 @@ var geomDict = {};
     const images = convert3DArrayToBitmaps(output);
     updateMapsFromImageData(images, mapsDiv, mapNames);
     console.log(
+      "Inputs read and prep took: " +
+        (inputsReadyTime - startingTime) / 1000.0 +
+        " seconds."
+    );
+    console.log(
       "Raycasting took: " +
+        (window.performance.now() - inputsReadyTime) / 1000.0 +
+        " seconds."
+    );
+    console.log(
+      "Sensor views update took: " +
         (window.performance.now() - startingTime) / 1000.0 +
         " seconds."
     );
+
+    const input_data = tf.tensor(output.map((d) => {return d.flat()}))
+    const predictions = daModel.predict(input_data)
+    console.log(predictions)
+  
   }
 
   function visualizeSensorPos(sensorsPos, viewport, hideCeiling) {
@@ -222,7 +249,7 @@ var geomDict = {};
 
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-          const val = Math.floor(array[x][y][d]);
+          const val = Math.min(255, Math.floor(array[x][y][d] * 255));
           const b = val & 0x000000ff;
           const g = (val & 0x0000ff00) >> 8;
           const r = (val & 0x00ff0000) >> 16;
