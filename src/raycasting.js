@@ -25,7 +25,6 @@ export function raycasting(
   windowsTransparency,
   finDepth,
   finSpacing,
-  maxDistance
 ) {
     console.log(ceiling, floor, glazing)
   if (!finSpacing) {
@@ -145,7 +144,6 @@ export function raycasting(
       let contextRefl = new Array(rays.length).fill(0);
       let contextDepth = new Array(rays.length).fill(0);
 
-      let maxContextDepth = maxDistance;
       for (let i = 0; i < contextMeshes.length; ++i) {
         for (let j = 0; j < rays.length; ++j) {
           let face_ii = [];
@@ -163,9 +161,6 @@ export function raycasting(
           if (d > 0) {
             contextRefl[j] = contextReflValues[i];
             contextDepth[j] = d;
-            if (d > maxContextDepth) {
-              maxContextDepth = d;
-            }
           }
         }
       }
@@ -195,12 +190,27 @@ export function raycasting(
         windowsReflectance,
       ];
 
+      // find maxDepth
+      let maxDepth = 0.0;
+      let maxContextDepth = 0.0;
+      for (let i= 0; i < n_lat; ++i)
+      {
+          for (let j = 0; j < n_long; ++j)
+          {
+              let k = i * n_long + j;
+              if (depthMap[k] > maxDepth) maxDepth = depthMap[k];
+              if (contextDepth[k] > maxContextDepth) maxContextDepth = contextDepth[k];
+          }
+      }
+      if (maxDepth == 0.0) alert("Invalid max depth (0.0), please check all input geometries and sensor positions.");
+
+
       for (let i = 0; i < n_lat; ++i) {
         for (let j = 0; j < n_long; ++j) {
           let k = i * n_long + j;
 
           // depthmap
-          let d = depthMap[k] > 0 ? depthMap[k] : maxContextDepth;
+          let d = depthMap[k] > 0 ? depthMap[k]/maxDepth : 0.0;   //  just in case, but should not be needed for closed geometries - properly modeled interior spaces
 
           // transparency: windows are geometries[3]
           let win = geomType[k] === 3 ? windowsTransparency : 0.0;
@@ -211,18 +221,22 @@ export function raycasting(
           // shading devices mask
           let shade = shadingMap[k] >= 0 ? shadingFactors[shadingMap[k]] : 0;
 
-          sensorsResult[sensorCount][k][0] = (d / maxContextDepth) * 255; //[0 - maxDistance]
-          sensorsResult[sensorCount][k][1] = win * 255; //[0 - 1]
-          sensorsResult[sensorCount][k][2] = refl * 255; //[0 - 1]
-          sensorsResult[sensorCount][k][3] = shade * 255; // [0 - 1?]
-          sensorsResult[sensorCount][k][4] = contextRefl[k] * 255; // see initiz. [0.3 or 0.4] -> [76.5 or 102.0]
-          sensorsResult[sensorCount][k][5] =
-            (contextDepth[k] / maxContextDepth) * 255; // [0 - maxDistance]
+          // context depth
+          let cd = maxContextDepth > 0.0 ? contextDepth[k] / maxContextDepth : contextDepth[k];
+
+          sensorsResult[sensorCount][k][0] = d;  // [0-1]
+          sensorsResult[sensorCount][k][1] = win;  // [0-1]
+          sensorsResult[sensorCount][k][2] = refl;  // [0-1]
+          sensorsResult[sensorCount][k][3] = shade;  // [0 - f], f ~< 4.0 based on training dataset parametrization, may vary if extreme proportions are used
+          sensorsResult[sensorCount][k][4] = contextRefl[k];  // in theory [0-1] but currently {0.3, 0.4}
+          sensorsResult[sensorCount][k][5] = cd;  // [0-1]
         }
       }
 
       sensorCount++;
     });
+
+    // sensorsResult has shape [nSensors, nRays, nMaps]
     return sensorsResult;
   }
 }
