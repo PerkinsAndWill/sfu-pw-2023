@@ -9,6 +9,9 @@ import {
   BufferAttribute,
   PointsMaterial,
   Points,
+  MeshBasicMaterial,
+  BoxGeometry,
+  Color,
 } from "three";
 import { raycasting } from "./raycasting.js";
 
@@ -26,7 +29,7 @@ import {
   sceneTree,
 } from "@shapediver/viewer";
 
-import * as tf from '@tensorflow/tfjs';
+import * as tf from "@tensorflow/tfjs";
 
 // ------------ Model specific variables ------------------
 const mapNames = [
@@ -48,6 +51,19 @@ const geomNames = [
   "glazing gltf",
 ];
 
+const daylightColorMap = [
+  new Color(76 / 255, 108 / 255, 169 / 255),
+  new Color(108 / 255, 139 / 255, 196 / 255),
+  new Color(163 / 255, 194 / 255, 241 / 255),
+  new Color(182 / 255, 207 / 255, 232 / 255),
+  new Color(225 / 255, 229 / 255, 145 / 255),
+  new Color(254 / 255, 244 / 255, 85 / 255),
+  new Color(246 / 255, 202 / 255, 54 / 255),
+  new Color(236 / 255, 138 / 255, 9 / 255),
+  new Color(234 / 255, 116 / 255, 1 / 255),
+  new Color(235 / 255, 68 / 255, 1 / 255),
+  new Color(234 / 255, 38 / 255, 1 / 255)
+];
 // ------------ Global variables ------------------
 var shapediverDiv;
 var shapediverViewport;
@@ -55,20 +71,18 @@ var shapediverSession;
 var isLoading = false;
 var geomDict = {};
 var daModel;
-
-
+var vizScene;
 (async () => {
-
   // ------------ Load surrogate models -------------------
-    tf.loadLayersModel("da_model/model.json").then((model) => {
-      daModel = model;
-    })
+  tf.loadLayersModel("da_model/model.json").then((model) => {
+    daModel = model;
+  });
 
   //  -------  Setting up ShapeDiver -----------
   await createSession({
     ticket:
-      "30b267f1fae22edae4ba3b534777166e6e96f648fd7165cf048cd5d6a8e6e4662118ed377dfaf0e79d4678c4cdf940f81304169e7751dfdf0ac628b071c37e87aa29f1e7bead3271312643c26ca51281d5045397a4961ef4608a7fd3a153af23431f03aa246ee6-37c8214b26644476a3301cc14c876c5a",
-    //  "98fe8ed861d69330041c9661da3d61086606a6617fb3380fc21e0537ab66ead0002788fbc3c612ef6ed746d60d4ab961e6c284969f9b88dab326438326bb92b45710b415f5598c32fa7c32ae3f994fb1605e0c4bb59ed20af6c896cec5814e5e38e96ec231c7d0-eed48907401cc45c0ca457d3cbed7972",
+      //  "30b267f1fae22edae4ba3b534777166e6e96f648fd7165cf048cd5d6a8e6e4662118ed377dfaf0e79d4678c4cdf940f81304169e7751dfdf0ac628b071c37e87aa29f1e7bead3271312643c26ca51281d5045397a4961ef4608a7fd3a153af23431f03aa246ee6-37c8214b26644476a3301cc14c876c5a",
+      "98fe8ed861d69330041c9661da3d61086606a6617fb3380fc21e0537ab66ead0002788fbc3c612ef6ed746d60d4ab961e6c284969f9b88dab326438326bb92b45710b415f5598c32fa7c32ae3f994fb1605e0c4bb59ed20af6c896cec5814e5e38e96ec231c7d0-eed48907401cc45c0ca457d3cbed7972",
     //'2670fa61e598730ba7fde7c216458a947cfbf5b376d22b5099b0b5606921c5f0e196d9e2fb24d472baea7fbaeae3b7026225e6f30dfbcefaa1d1e37f297eb61ffd7ff9f10b1da445ca1dc3735e8ca45912448b6dfe706186e1bd676b57af7866dcfbe33dbc6fb5-ed10e8c5299adbb0bd084362d9a7bffa',
     //"1979a96ce6ca6a66d198df520d461be05d68e189af9fcc233e55b7d7c61d8f22b970db686730416d3729e96005317af274923a30760263f963e803e84871cbf05759b16de94a55f05cdde554918ab1cc3f0c80fd43be49488f7f55109e620e0c3652fbd4c6bbe3-3214df684b196a9264bd5cd0b4d78025",
     //'6ed7e05204e02d49e8be6172a4af9e41c40c2435c62afd3f0a1c31fdf1076f62945e8681209be384b7a3ba6ea0b868fc5bf29eb5df26eec35b128269e2fa13f26b3039d2d149e92c07005357791484f7cf85047561e6a23e1d59e1c0e841a60a4309a85ca03ce3-dac913e8b63871ac1e10c3435c5755b6',
@@ -137,9 +151,6 @@ var daModel;
       .find((o) => o.name === "sensorsPos")
       .content[0].data.map((a) => new Vector3(a[0], a[1], a[2]));
 
-    // Uncomment to see sensor points on the floor
-    // visualizeSensorPos(sensorsPos, shapediverViewport, true)
-
     // Raycasting parameters
     let simNumber = 0;
     let resHeight = 32;
@@ -147,8 +158,8 @@ var daModel;
     let ceiling = geomDict["ceiling geom"];
     let floor = geomDict["floor geom"];
     let wall = geomDict["walls geom"];
-    let glazing = geomDict["glazing gltf"];
-    let shading = geomDict["glazing gltf"];
+    let glazing = geomDict["glazing geom"];
+    let shading = geomDict["glazing geom"];
     let surroundings = [];
     let ground = geomDict["floor geom"][0]; //TODO fetch real ground
     let wallsReflectance = 0.8;
@@ -201,40 +212,162 @@ var daModel;
         " seconds."
     );
 
-    const input_data = tf.tensor(output.map((d) => {return d.flat()}))
-    const predictions = daModel.predict(input_data)
-    console.log(predictions)
-  
+    const input_data = tf.tensor(
+      output.map((d) => {
+        return d.flat();
+      })
+    );
+    const predictions = daModel.predict(input_data);
+    console.log(predictions);
+
+    //  -------------- Visualization ------------------------
+
+    shapediverViewport.shadows = false;
+
+    let predictionsArray = predictions
+      .arraySync()
+      .map((x) => Math.max(0, Math.min(1, x[0]))); // ensuringt the values stay within [0, 1]
+    console.log(predictionsArray);
+
+    let room2DWidth = Object.values(shapediverSession.parameters).find(
+      (x) => x.name === "width"
+    ).value;
+    let room2DHeight = Object.values(shapediverSession.parameters).find(
+      (x) => x.name === "depth"
+    ).value;
+
+    visualizePredictions(
+      sensorsPos,
+      predictionsArray,
+      shapediverViewport,
+      true,
+      room2DWidth,
+      room2DHeight
+    );
+    // Uncomment to see sensor points on the floor
+    // visualizeSensorPos(sensorsPos, predictionsArray, shapediverViewport, true)
   }
 
-  function visualizeSensorPos(sensorsPos, viewport, hideCeiling) {
+  function visualizePredictions(
+    sensorsPos,
+    predictionsArray,
+    viewport,
+    hideCeiling,
+    width,
+    height
+  ) {
     if (hideCeiling) {
-      geomDict["ceiling geom"].visible = false;
+      geomDict["ceiling geom"].forEach((g) => (g.visible = false));
     }
 
-    // create a node that contains our data
-    const threejsNode = new TreeNode();
+    if (vizScene) {
+      vizScene.remove(...vizScene.children);
+      vizScene = null;
+    }
 
+    const visualizationNode = new TreeNode();
     // create an Object3D and add it to the node as a data item
     const scene = new Object3D();
-    threejsNode.data.push(new ThreejsData(scene));
+    vizScene = scene;
+    visualizationNode.data.push(new ThreejsData(vizScene));
 
     // add any kind of three js items to that object
-    sensorsPos.forEach((pos) => {
+    sensorsPos.forEach((pos, index) => {
+      const box = new BoxGeometry(0.6096, 0.6096, 0.2);
+
+      const color = interpolateColors(
+        daylightColorMap,
+        predictionsArray[index]
+      );
+
+      const material = new MeshBasicMaterial({ color: color });
+      material.side = DoubleSide;
+      const tile = new Mesh(box, material);
+      tile.position.set(pos.x, pos.y, pos.z);
+
+      scene.add(tile);
+    });
+    // add the node to the scene tree and update
+
+    sceneTree.root.addChild(visualizationNode);
+    sceneTree.root.updateVersion();
+    viewport.update();
+  }
+
+  function visualizeSensorPos(
+    sensorsPos,
+    predictionsArray,
+    viewport,
+    hideCeiling
+  ) {
+    if (hideCeiling) {
+      geomDict["ceiling geom"].forEach((g) => (g.visible = false));
+    }
+
+    if (vizScene) {
+      vizScene.remove(...vizScene.children);
+      vizScene = null;
+    }
+
+    const visualizationNode = new TreeNode();
+    // create an Object3D and add it to the node as a data item
+    const scene = new Object3D();
+    vizScene = scene;
+    visualizationNode.data.push(new ThreejsData(vizScene));
+
+    // add any kind of three js items to that object
+    sensorsPos.forEach((pos, index) => {
       const dotGeometry = new BufferGeometry();
       dotGeometry.setAttribute(
         "position",
-        new BufferAttribute(new Float32Array([pos.x, pos.y, pos.z]), 3)
+        new BufferAttribute(new Float32Array([pos.x, pos.y, pos.z + 0.5]), 3)
       );
-      const dotMaterial = new PointsMaterial({ size: 0.1, color: 0xff0000 });
+      const color = new Color(0, Math.min(1, predictionsArray[index]), 0);
+      console.log(index, color);
+      const dotMaterial = new PointsMaterial({ size: 0.5, color: color }); //0xff0000
       const dot = new Points(dotGeometry, dotMaterial);
       scene.add(dot);
     });
 
     // add the node to the scene tree and update
-    sceneTree.root.addChild(threejsNode);
+    sceneTree.root.addChild(visualizationNode);
     sceneTree.root.updateVersion();
     viewport.update();
+  }
+
+  function interpolateColors(colors, t) {
+    // Clamp the value of t between 0 and 1
+    t = Math.min(1, Math.max(0, t));
+    if (t === 1) return colors[colors.length - 1];
+    if (t === 0) return colors[0];
+
+    // Determine the number of color segments
+    const segmentCount = colors.length - 1;
+    const segmentSize = 1 / segmentCount;
+
+    // Determine the current segment index and normalized t value within the segment
+    const segmentIndex = Math.floor(t / segmentSize);
+    const segmentT = (t - segmentIndex * segmentSize) / segmentSize;
+    console.log(
+      segmentCount,
+      segmentSize,
+      segmentIndex,
+      segmentT,
+      t,
+      colors[segmentIndex],
+      colors
+    );
+    // Retrieve the start and end colors of the current segment
+    const startColor = colors[segmentIndex].clone().convertSRGBToLinear();
+    const endColor = colors[segmentIndex + 1].clone().convertSRGBToLinear();
+
+    // Interpolate the RGB values between the start and end colors
+    const interpolatedColor = new Color();
+    interpolatedColor.r = startColor.r + (endColor.r - startColor.r) * segmentT;
+    interpolatedColor.g = startColor.g + (endColor.g - startColor.g) * segmentT;
+    interpolatedColor.b = startColor.b + (endColor.b - startColor.b) * segmentT;
+
+    return interpolatedColor.convertLinearToSRGB();
   }
 
   function convert3DArrayToBitmaps(array) {
@@ -297,7 +430,14 @@ var daModel;
       mapsDiv.appendChild(mDiv);
     }
   }
+  function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+  }
 
+  function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+  }
   /** Used to create daylightingmaps based on image urls
    * (e.g., in case the maps were created in Grasshopper as bitmaps) */
   async function updateMaps(session, mapsDiv, mapNames) {
@@ -331,7 +471,9 @@ var daModel;
       }
     }
   }
-
+  function map(value, istart, istop, ostart, ostop) {
+    return ostart + (ostop - ostart) * ((value - istart) / (istop - istart));
+  }
   async function createParametersSliders(session, parameterDiv) {
     console.log(session);
     /*  for (var o in session.outputs) {

@@ -1,7 +1,5 @@
-import { Raycaster, Vector3, Mesh, BufferGeometry,  } from "three";
+import { Raycaster, Vector3, Mesh, BufferGeometry } from "three";
 
-
-import {MeshBVH , acceleratedRaycast } from 'three-mesh-bvh';
 //Mesh.prototype.raycast = acceleratedRaycast;
 // Ideas for optimizing
 // important thread https://github.com/mrdoob/three.js/issues/12857
@@ -24,9 +22,9 @@ export function raycasting(
   ceilingReflectance,
   windowsTransparency,
   finDepth,
-  finSpacing,
+  finSpacing
 ) {
-    console.log(ceiling, floor, glazing)
+  console.log(ceiling, floor, glazing);
   if (!finSpacing) {
     console.log(`Skipping iteration ${simNumber} because fin spacing is null`);
   } else {
@@ -73,10 +71,9 @@ export function raycasting(
 
     // list of all meshes
     let geometries = [...ceiling, ...floor, ...wall, ...glazing];
-    console.log(geometries)
+    console.log(geometries);
     geometries.forEach((geom) => {
-        geom.geometry.boundsTree = new MeshBVH(  geom.geometry );
-       // geom.geometry.computeBoundsTree();
+      // geom.geometry.computeBoundsTree();
       /*   geom.geometry.normalizeNormals () 
             geom.geometry.computeVertexNormals ()  //TODO is this needeed? computeVertexNormals?
             geom.geometry.computeBoundingBox()  */
@@ -88,7 +85,9 @@ export function raycasting(
       .map(() =>
         new Array(n_lat * n_long).fill(0).map(() => new Array(6).fill(0))
       );
-
+    console.log(
+      "Num Sensors = " + sensorsPos.length + " ,Num of Rays = " + n_lat * n_long
+    );
     // compute individual depthmaps for each geometry type, per sensor
     let sensorCount = 0;
 
@@ -118,7 +117,7 @@ export function raycasting(
       for (let i = 0; i < shading.length; ++i) {
         for (let j = 0; j < rays.length; ++j) {
           raycaster.set(sensorPos, rays[j]);
-          
+
           let intersections = [];
           let result = new Vector3();
           let bb = geometries[i].geometry.boundingBox;
@@ -126,7 +125,7 @@ export function raycasting(
           {
             intersections = raycaster.intersectObject(shading[i]);
           }
-         
+
           let d = intersections.length > 0 ? intersections[0].distance : -1;
           if (d > 0) {
             shadingMap[j] = i;
@@ -147,7 +146,7 @@ export function raycasting(
       for (let i = 0; i < contextMeshes.length; ++i) {
         for (let j = 0; j < rays.length; ++j) {
           let face_ii = [];
-          raycaster.set(sensorPos, rays[j])
+          raycaster.set(sensorPos, rays[j]);
 
           let intersections = [];
           let result = new Vector3();
@@ -181,7 +180,7 @@ export function raycasting(
           }
         }
       }
-
+ 
       let windowsReflectance = 0.0;
       let reflectanceValues = [
         ceilingReflectance,
@@ -193,24 +192,25 @@ export function raycasting(
       // find maxDepth
       let maxDepth = 0.0;
       let maxContextDepth = 0.0;
-      for (let i= 0; i < n_lat; ++i)
-      {
-          for (let j = 0; j < n_long; ++j)
-          {
-              let k = i * n_long + j;
-              if (depthMap[k] > maxDepth) maxDepth = depthMap[k];
-              if (contextDepth[k] > maxContextDepth) maxContextDepth = contextDepth[k];
-          }
+      for (let i = 0; i < n_lat; ++i) {
+        for (let j = 0; j < n_long; ++j) {
+          let k = i * n_long + j;
+          if (depthMap[k] > maxDepth) maxDepth = depthMap[k];
+          if (contextDepth[k] > maxContextDepth)
+            maxContextDepth = contextDepth[k];
+        }
       }
-      if (maxDepth == 0.0) alert("Invalid max depth (0.0), please check all input geometries and sensor positions.");
-
+      if (maxDepth == 0.0)
+        alert(
+          "Invalid max depth (0.0), please check all input geometries and sensor positions."
+        );
 
       for (let i = 0; i < n_lat; ++i) {
         for (let j = 0; j < n_long; ++j) {
           let k = i * n_long + j;
 
           // depthmap
-          let d = depthMap[k] > 0 ? depthMap[k]/maxDepth : 0.0;   //  just in case, but should not be needed for closed geometries - properly modeled interior spaces
+          let d = depthMap[k] > 0 ? depthMap[k] / maxDepth : 0.0; //  just in case, but should not be needed for closed geometries - properly modeled interior spaces
 
           // transparency: windows are geometries[3]
           let win = geomType[k] === 3 ? windowsTransparency : 0.0;
@@ -222,14 +222,25 @@ export function raycasting(
           let shade = shadingMap[k] >= 0 ? shadingFactors[shadingMap[k]] : 0;
 
           // context depth
-          let cd = maxContextDepth > 0.0 ? contextDepth[k] / maxContextDepth : contextDepth[k];
-
-          sensorsResult[sensorCount][k][0] = d;  // [0-1]
-          sensorsResult[sensorCount][k][1] = win;  // [0-1]
-          sensorsResult[sensorCount][k][2] = refl;  // [0-1]
-          sensorsResult[sensorCount][k][3] = shade;  // [0 - f], f ~< 4.0 based on training dataset parametrization, may vary if extreme proportions are used
-          sensorsResult[sensorCount][k][4] = contextRefl[k];  // in theory [0-1] but currently {0.3, 0.4}
-          sensorsResult[sensorCount][k][5] = cd;  // [0-1]
+          let cd =
+            maxContextDepth > 0.0
+              ? contextDepth[k] / maxContextDepth
+              : contextDepth[k];
+          if (
+            d === NaN ||
+            win === NaN ||
+            refl === NaN ||
+            shade === NaN ||
+            contextRefl === NaN ||
+            cd === NaN
+          )
+            console.log(sensorCount, k);
+          sensorsResult[sensorCount][k][0] = d; // [0-1]
+          sensorsResult[sensorCount][k][1] = win; // [0-1]
+          sensorsResult[sensorCount][k][2] = refl; // [0-1]
+          sensorsResult[sensorCount][k][3] = shade; // [0 - f], f ~< 4.0 based on training dataset parametrization, may vary if extreme proportions are used
+          sensorsResult[sensorCount][k][4] = contextRefl[k]; // in theory [0-1] but currently {0.3, 0.4}
+          sensorsResult[sensorCount][k][5] = cd; // [0-1]
         }
       }
 
