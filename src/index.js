@@ -348,15 +348,7 @@ var vizScene;
     // Determine the current segment index and normalized t value within the segment
     const segmentIndex = Math.floor(t / segmentSize);
     const segmentT = (t - segmentIndex * segmentSize) / segmentSize;
-    console.log(
-      segmentCount,
-      segmentSize,
-      segmentIndex,
-      segmentT,
-      t,
-      colors[segmentIndex],
-      colors
-    );
+    
     // Retrieve the start and end colors of the current segment
     const startColor = colors[segmentIndex].clone().convertSRGBToLinear();
     const endColor = colors[segmentIndex + 1].clone().convertSRGBToLinear();
