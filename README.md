@@ -1,8 +1,24 @@
-# sfu-pw-2023
-PERKINS&amp;WILL RESEARCH + SFU COLLABORATION: Energy - Daylight Artificial Intelligence Tool 
+# pw-sfu-vue
 
-### To run simply call:
-npm install 
+## Project setup
+```
+npm install
+```
 
-npm start
+### Compiles and hot-reloads for development
+```
+npm run serve
+```
 
+### Compiles and minifies for production
+```
+npm run build
+```
+
+### Lints and fixes files
+```
+npm run lint
+```
+
+### Customize configuration
+See [Configuration Reference](https://cli.vuejs.org/config/).
