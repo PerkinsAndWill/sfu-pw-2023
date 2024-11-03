@@ -1,0 +1,70 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31624.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Unicorn", "Unicorn.csproj", "{A29CA670-8FE1-4730-9BEB-95A0FE572A41}"
+EndProject
+Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "", "unicornviewer\", "{8491C43C-4392-4B0A-A101-60BFCC5060D0}"
+	ProjectSection(WebsiteProperties) = preProject
+		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.0"
+		Debug.AspNetCompiler.VirtualPath = "/localhost_55764"
+		Debug.AspNetCompiler.PhysicalPath = "unicornviewer\"
+		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_55764\"
+		Debug.AspNetCompiler.Updateable = "true"
+		Debug.AspNetCompiler.ForceOverwrite = "true"
+		Debug.AspNetCompiler.FixedNames = "false"
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.VirtualPath = "/localhost_55764"
+		Release.AspNetCompiler.PhysicalPath = "unicornviewer\"
+		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_55764\"
+		Release.AspNetCompiler.Updateable = "true"
+		Release.AspNetCompiler.ForceOverwrite = "true"
+		Release.AspNetCompiler.FixedNames = "false"
+		Release.AspNetCompiler.Debug = "False"
+		VWDPort = "55764"
+		SlnRelativePath = "unicornviewer\"
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Debug|x64.ActiveCfg = Debug|x64
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Debug|x64.Build.0 = Debug|x64
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Debug|x86.Build.0 = Debug|Any CPU
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Release|x64.ActiveCfg = Release|x64
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Release|x64.Build.0 = Release|x64
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Release|x86.ActiveCfg = Release|x86
+		{A29CA670-8FE1-4730-9BEB-95A0FE572A41}.Release|x86.Build.0 = Release|x86
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Debug|x64.Build.0 = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Debug|x86.Build.0 = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Release|x64.ActiveCfg = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Release|x64.Build.0 = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Release|x86.ActiveCfg = Debug|Any CPU
+		{8491C43C-4392-4B0A-A101-60BFCC5060D0}.Release|x86.Build.0 = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {283A7CA6-3351-4C6F-8E3F-36EE8DBA08E0}
+	EndGlobalSection
+EndGlobal

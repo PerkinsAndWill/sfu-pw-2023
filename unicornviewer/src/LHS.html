@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LHS Scatter Plot</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div id="scatter-plot" style="width: 100%; height: 600px;"></div>
+    <script>
+        function randomLHS(k, intervals, PRNG = Math.random) {
+            const tres = [];
+            const n = intervals.length;
+
+            for (let j = 0; j < k; j++) {
+                const col = randomPerm(intervals[j]);
+                for (let i = 0; i < intervals[j]; i++) {
+                    col[i] += PRNG();
+                    col[i] /= intervals[j];
+                }
+                tres[j] = col;
+            }
+
+            const maxIntervals = Math.max(...intervals);
+            const res = [];
+
+            for (let i = 0; i < maxIntervals; i++) {
+                res[i] = [];
+                for (let j = 0; j < k; j++) {
+                    res[i][j] = tres[j][i % intervals[j]];
+                }
+            }
+
+            return res;
+
+            function randomPerm(k) {
+                const res = [];
+                for (let i = 0; i < k; i++) {
+                    res[i] = i;
+                }
+
+                for (let i = k - 1; i >= 0; --i) {
+                    const pos = Math.floor(i * PRNG());
+                    const tmp = res[i];
+                    res[i] = res[pos];
+                    res[pos] = tmp;
+                }
+
+                return res;
+            }
+        }
+
+        // Example usage
+        const k = 3;
+        const intervals = [5, 10, 15]; // Different number of intervals per dimension
+        const samples = randomLHS(k, intervals);
+        console.log(samples.length, samples)
+        // Extract data for scatter plot
+        const x = samples.map(sample => sample[0]);
+        const y = samples.map(sample => sample[1]);
+        const z = samples.map(sample => sample[2]);
+
+        const trace1 = {
+            x: x,
+            y: y,
+            mode: 'markers',
+            type: 'scatter',
+            name: 'Dimension 1 vs 2',
+            marker: { size: 12 }
+        };
+
+        const trace2 = {
+            x: x,
+            y: z,
+            mode: 'markers',
+            type: 'scatter',
+            name: 'Dimension 1 vs 3',
+            marker: { size: 12 }
+        };
+
+        const trace3 = {
+            x: y,
+            y: z,
+            mode: 'markers',
+            type: 'scatter',
+            name: 'Dimension 2 vs 3',
+            marker: { size: 12 }
+        };
+
+        const data = [trace1, trace2, trace3];
+
+        const layout = {
+            title: 'Latin Hypercube Sampling Scatter Plot',
+            xaxis: {
+                title: 'Dimension 1 / 2 / 3',
+            },
+            yaxis: {
+                title: 'Dimension 2 / 3',
+            },
+            showlegend: true
+        };
+
+        Plotly.newPlot('scatter-plot', data, layout);
+    </script>
+</body>
+</html>
