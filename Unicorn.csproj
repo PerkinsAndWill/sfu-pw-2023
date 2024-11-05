@@ -89,6 +89,12 @@
   </ItemGroup>
   
   <ItemGroup>
+    <None Update="data\data_load_server.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="data\run_data_load.bash">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Definitions\daylight_sample.gh">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

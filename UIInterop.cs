@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unicorn.ViewModels;
 using Rhino.Compute;
+using System;
+using System.Diagnostics;
 
 #if WIN
 using CefSharp;
@@ -105,6 +107,10 @@ namespace Unicorn
             }
         }
 
+        internal void VisualizeAnalysisData(string csv)
+        {
+            Browser.EvaluateScriptAsync("visualizeAnalysisData", csv);
+        }
 
         internal void SetServerLoaded()
         {
@@ -174,6 +180,12 @@ namespace Unicorn
         {
             ViewModel.OpenAnalysisFolder();
         }
+        public void VisualizeAnalysis(string analysisName)
+        {
+            ViewModel.VisualizeAnalysis(analysisName);
+        }
+        
+
 
         public void SwitchDaylightMesh(int daylightMeshIndex)
         {
@@ -202,9 +214,9 @@ namespace Unicorn
         {
             ViewModel.SaveCurrentAlt(name, false);
         }
-        public void LoadAlt(string name)
+        public void LoadAlt(string name, string subfolder = "")
         {
-            ViewModel.LoadAltAsCurrent(name);
+            ViewModel.LoadAltAsCurrent(name, subfolder);
         }
 
         public void DeleteAlt(string name)
@@ -215,6 +227,11 @@ namespace Unicorn
         public string GetAlts()
         {
             return ViewModel.GetAlts();
+        }
+
+        public string GetAnalysisFolders()
+        {
+            return JsonConvert.SerializeObject(ViewModel.GetAnalysisFolders());
         }
 
         public string GetCurrentAlt()
@@ -229,6 +246,8 @@ namespace Unicorn
         {
             Rhino.RhinoApp.RunScript(script, false);
         }
+
+        
 
 
         #endregion

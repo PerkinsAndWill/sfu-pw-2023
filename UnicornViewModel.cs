@@ -11,6 +11,7 @@ using Rhino.Input;
 using Rhino.Input.Custom;
 using Rhino.Render;
 using Rhino.Runtime;
+using Servers;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -18,8 +19,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static Unicorn.ViewModels.UnicornViewModel;
 using Mesh = Rhino.Geometry.Mesh;
 
 namespace Unicorn.ViewModels
@@ -125,9 +126,6 @@ namespace Unicorn.ViewModels
         internal List<Guid> wallsGuid = new List<Guid>();
         internal List<Brep> walls = new List<Brep>();
 
-        internal List<Brep> paramterizedWalls = new List<Brep>();
-        internal Dictionary<Brep, Dictionary<string, string>> paramterizedWallsData = new Dictionary<Brep, Dictionary<string, string>>();
-
         internal Mesh currentlySelectedWall;
         internal List<Brep> currentlySelectedWalls = new List<Brep>();
         internal List<int> wallDirections = new List<int>();
@@ -220,7 +218,7 @@ namespace Unicorn.ViewModels
             return SaveCustomViewAlt(currentAlternative.currentObjectsGuids, currentAlternative.zone, name, isAutomatedSave);
         }
 
-        internal Task SaveObjectsToImage(List<Guid> objectGuids, Curve zone, double height, string name, string subfolder, bool moveFar = true)
+        internal Task SaveObjectsToImage(List<Guid> objectGuids, Alternative alt, double height, string name, string subfolder, bool moveFar = true)
         {
             return Task.Run(() =>
             {
@@ -267,9 +265,9 @@ namespace Unicorn.ViewModels
 
 
                         // Calculate the bounding box on the 
-                        BoundingBox bbox = zone.GetBoundingBox(false);
+                        BoundingBox bbox = alt.zone.GetBoundingBox(false);
 
-                        Clip(zone, view.ActiveViewportID, true, height);
+                        Clip(alt.zone, view.ActiveViewportID, true, height);
 
                         const double pad = 0.02;    // A little padding...
                         double dx = (bbox.Max.X - bbox.Min.X) * pad;
@@ -281,16 +279,16 @@ namespace Unicorn.ViewModels
                         view.Redraw();
                         doc.Views.Redraw();
 
-                        DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Rendered");
+                        DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Arctic");
 
                         // Capture the view to a bitmap
                         Bitmap bm = view.CaptureToBitmap(new Size(view.ActiveViewport.Size.Width, view.ActiveViewport.Size.Height), displaymode);
 
                         string imageBytes = ImageToBase64String(bm);
 
-                        string json = JsonConvert.SerializeObject(currentAlternative, GeometryResolver.Settings);
 
-                        string savingFolder = GetDataFolderPath() + subfolder;
+
+                        string savingFolder = UnicornPlugin.Instance.GetDataFolderPath() + subfolder;
                         if (!Directory.Exists(savingFolder))
                         {
                             Directory.CreateDirectory(savingFolder);
@@ -300,6 +298,7 @@ namespace Unicorn.ViewModels
 
                         string combinedPath = Path.Combine(savingFolder, altFileName);
 
+                        string json = JsonConvert.SerializeObject(alt, GeometryResolver.Settings);
                         File.WriteAllText(combinedPath + ".json", json);
                         bm.Save(combinedPath + ".png");
 
@@ -361,7 +360,7 @@ namespace Unicorn.ViewModels
                         view.Redraw();
                         doc.Views.Redraw();
 
-                        DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Rendered");
+                        DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Arctic");
 
 
                         // Capture the view to a bitmap
@@ -383,7 +382,7 @@ namespace Unicorn.ViewModels
 
                         string json = JsonConvert.SerializeObject(currentAlternative, GeometryResolver.Settings);
 
-                        string savingFolder = GetDataFolderPath();
+                        string savingFolder = UnicornPlugin.Instance.GetDataFolderPath();
                         if (!Directory.Exists(savingFolder))
                         {
                             Directory.CreateDirectory(savingFolder);
@@ -418,16 +417,11 @@ namespace Unicorn.ViewModels
         }
 
 
-        private string GetDataFolderPath()
-        {
-            string definitionPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            definitionPath = Path.GetDirectoryName(definitionPath);
-            return definitionPath + "\\data\\";
-        }
-        async internal void LoadAltAsCurrent(string name)
+
+        async internal void LoadAltAsCurrent(string name, string subfolder = "")
         {
 
-            string fileToLoad = GetDataFolderPath() + name + ".json";
+            string fileToLoad = Path.Combine(Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), subfolder), name + ".json");
             if (File.Exists(fileToLoad))
             {
                 Alternative alternative = LoadAlt(fileToLoad);
@@ -484,7 +478,7 @@ namespace Unicorn.ViewModels
         }
         internal void DeleteAlt(string name)
         {
-            string fileToDelete = GetDataFolderPath() + name + ".json";
+            string fileToDelete = UnicornPlugin.Instance.GetDataFolderPath() + name + ".json";
             if (File.Exists(fileToDelete))
             {
                 File.Delete(fileToDelete);
@@ -493,12 +487,12 @@ namespace Unicorn.ViewModels
 
         internal string GetAlts()
         {
-            IOrderedEnumerable<string> altFiles = Directory.GetFiles(GetDataFolderPath(), "*.json").OrderByDescending(d => new FileInfo(d).CreationTime);
+            IOrderedEnumerable<string> altFiles = Directory.GetFiles(UnicornPlugin.Instance.GetDataFolderPath(), "*.json").OrderByDescending(d => new FileInfo(d).CreationTime);
             return "[" + String.Join(",", altFiles.Select(fn => File.ReadAllText(fn))) + "]";
         }
         internal string GetCurrentAlt()
         {
-            string[] altFiles = Directory.GetFiles(GetDataFolderPath(), "current.json");
+            string[] altFiles = Directory.GetFiles(UnicornPlugin.Instance.GetDataFolderPath(), "current.json");
             return String.Join("", altFiles.Select(fn => File.ReadAllText(fn)));
         }
 
@@ -560,6 +554,10 @@ namespace Unicorn.ViewModels
                 SetContext(cntx);
             };
 
+            InteriorWallsSet += (iws) =>
+            {
+                SetInteriorWalls(iws);
+            };
 
             InitDataOnView();
         }
@@ -579,9 +577,23 @@ namespace Unicorn.ViewModels
 
         internal void SetContext(List<GeometryBase> geometries)
         {
-            UnicornPlugin.UIInterop.UpdateUIData("isContextSet", true);
-            UpdateData(currentAlternative, "context", geometries);
+            Task.Run(async () =>
+            {
+                await UpdateData(currentAlternative, "context", geometries);
+                UnicornPlugin.UIInterop.UpdateUIData("isContextSet", true);
+            });
         }
+        internal  void SetInteriorWalls(List<GeometryBase> geometries)
+        {
+            Task.Run(async () =>
+            {
+                await UpdateData(currentAlternative, "interior_walls", geometries);
+                UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", true);
+            });
+        }
+
+
+
         internal void SetZone(Curve geometry, bool fresh = true)
         {
             Task.Run(async () =>
@@ -658,6 +670,10 @@ namespace Unicorn.ViewModels
         public delegate void ContextSetHandler(List<GeometryBase> geoms);
 
         public static event ContextSetHandler ContextSet;
+
+        public delegate void InteriorWallsSetHandler(List<GeometryBase> geoms);
+
+        public static event InteriorWallsSetHandler InteriorWallsSet;
 
         internal Result SetZone()
         {
@@ -773,7 +789,67 @@ namespace Unicorn.ViewModels
             }
 
         }
-        internal void SetInteriorWalls()
+
+        internal Result SetInteriorWalls()
+        {
+            try
+            {
+                // We run the entire selection process on the UI thread without Task.Run.
+                RhinoApp.InvokeOnUiThread((Action)delegate
+                {
+                    GetObject getter = new GetObject();
+                    getter.AcceptNothing(true);
+                    getter.GeometryFilter = ObjectType.Curve;
+                    getter.AcceptEnterWhenDone(true);
+                    getter.EnablePreSelect(true, true);
+                    getter.EnablePostSelect(true);
+                    getter.SetCommandPrompt("Select the interior walls(s)");
+
+                    // Run the object selection process
+                    GetResult result = getter.GetMultiple(0, 999);
+
+
+                    if (result == GetResult.Object)
+                    {
+                        // Selection succeeded
+
+                        Rhino.DocObjects.ObjRef[] objsRef = getter.Objects();
+                        if (objsRef.Length > 0)
+                        {
+                            currentAlternative.interiorWallsGuids = objsRef.Select(oref => oref.ObjectId).ToList();
+
+                            // Access the selected object's geometry
+                            List<GeometryBase> geometries = new List<GeometryBase>();
+                            foreach (ObjRef oRef in objsRef)
+                            {
+                                geometries.Add(oRef.Object().Geometry);
+                            }
+
+                            InteriorWallsSet(geometries);
+
+
+                        }
+                    }
+                    else if (result == GetResult.Nothing)
+                    {
+                        RhinoApp.WriteLine("Selection was canceled.");
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine("Selection failed.");
+                    }
+                });
+
+                return Result.Success;
+            }
+            catch (Exception ex)
+            {
+                RhinoApp.WriteLine($"An error occurred: {ex.Message}");
+                return Result.Failure;
+            }
+
+        }
+            internal void SetInteriorWalls2()
         {
             // do something
             Rhino.DocObjects.ObjRef[] objsRef = new Rhino.DocObjects.ObjRef[0];
@@ -838,6 +914,7 @@ namespace Unicorn.ViewModels
             }
             else if (key == "context")
             {
+                
                 context = (List<GeometryBase>)newValue;
             }
             else if (key == "interior_walls")
@@ -861,10 +938,30 @@ namespace Unicorn.ViewModels
 
         }
 
+
+        internal void VisualizeAnalysis(string analysisName)
+        {
+            // Run the server in a separate thread
+            if(!DataLoadServer.isServerRunning)
+            {
+                Task serverTask = Task.Run(() => DataLoadServer.StartServer());
+            }
+          
+            //load csv data
+            string analysisFile = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder + "\\" +analysisName + "\\data.csv";
+            var csv = File.ReadAllText(analysisFile);
+
+            VisualizeCorrelationsCSV(csv);
+
+            //call js code to load data into DesignExplorer 
+            UnicornPlugin.UIInterop.VisualizeAnalysisData(csv);
+
+        }
+
         internal void OpenAnalysisFolder()
         {
             string subfolder = parametricAnalysisFolder;
-            string analysisFolder = GetDataFolderPath() + subfolder;
+            string analysisFolder = UnicornPlugin.Instance.GetDataFolderPath() + subfolder;
             if (Directory.Exists(analysisFolder))
             {
                 ProcessStartInfo psi = new ProcessStartInfo();
@@ -874,6 +971,11 @@ namespace Unicorn.ViewModels
             }
         }
 
+        internal string[] GetAnalysisFolders()
+        {
+            string analysisFolder = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder;
+            return Directory.EnumerateDirectories(analysisFolder).Select(x => x.Substring(x.LastIndexOf("\\") + 1)).ToArray();
+        }
         async internal Task RunParametricAnalysisEstimate(string sampleJSON)
         {
             Alternative benchmark = currentAlternative;
@@ -996,9 +1098,9 @@ namespace Unicorn.ViewModels
             UnicornPlugin.UIInterop.UpdateParametricAnalysisProgress(0, samples.Count, false);
 
             List<string> altNames = new List<string>();
-            string analysisSubfolder = parametricAnalysisFolder + "\\" + DateTime.Now.Hour + "." + DateTime.Now.Minute + "_" + DateTime.Now.Day + "-" + DateTime.Now.Month + "-" + DateTime.Now.Year;
+            string analysisSubfolder = parametricAnalysisFolder + "/"  + DateTime.Now.Year + "-" + DateTime.Now.Month + "-" + DateTime.Now.Day + "_" + DateTime.Now.Hour + "." + DateTime.Now.Minute;
 
-            string parentAnalysisFolder = GetDataFolderPath() + parametricAnalysisFolder;
+            string parentAnalysisFolder = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder;
             if (!Directory.Exists(parentAnalysisFolder))
             {
                 Directory.CreateDirectory(parentAnalysisFolder);
@@ -1099,7 +1201,7 @@ namespace Unicorn.ViewModels
 
                         double height = benchmark.data["floor_to_floor"] is double ? (double)benchmark.data["floor_to_floor"] : 3.2;
 
-                        SaveObjectsToImage(visibleGuids, benchmark.zone, height, altName, analysisSubfolder, true).Wait();
+                        SaveObjectsToImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
 
 
                         guids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
@@ -1122,6 +1224,7 @@ namespace Unicorn.ViewModels
             {
                 return;
             }
+            var csvv = "WWR_per_wall,floor_to_floor,out:sDA,out:ASE,out:aUDI,out:MI,out:Heating,out:Cooling,img \n 0.3,2.4,20,22,26,714,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.3_floor_to_floor_2.4.png 0.3,5,36,61,55,1149,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.3_floor_to_floor_5.png\n 0.7,2.4,31,39,41,1541,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.7_floor_to_floor_2.4.png\n 0.7,5,96,97,64,3066,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.7_floor_to_floor_5.png\n";
 
             //-------------Writing to CSV -------
             string csvHeader = String.Join(",", paramNames.ToList()) + ",out:sDA,out:ASE,out:aUDI,out:MI,out:Heating,out:Cooling,img\n";
@@ -1141,12 +1244,12 @@ namespace Unicorn.ViewModels
                 }
                 //Adding all the outputs
                 allValues.AddRange(allOutputs[sampleNum].Take(6));
-
-                csvBody += string.Join(",", allValues) + "," + (altNames[sampleNum] + ".png") + "\n";
+                var imgURL = "http://localhost:3000/" + analysisSubfolder + "/" + (altNames[sampleNum] + ".png");
+                csvBody += string.Join(",", allValues) + "," + imgURL + "\n";
             }
 
             string csv = csvHeader + csvBody;
-            string savingFolder = GetDataFolderPath() + analysisSubfolder;
+            string savingFolder = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), analysisSubfolder);
             if (!Directory.Exists(savingFolder))
             {
                 Directory.CreateDirectory(savingFolder);
@@ -1155,10 +1258,69 @@ namespace Unicorn.ViewModels
             string combined = Path.Combine(savingFolder, altFileName + ".csv");
 
             File.WriteAllText(combined, csv);
+            //------------- calculating and sending correlation results to front-end -------
+
+            
+            ComputeThenVisualizeCorrelations(paramNames.ToList(), samples, allOutputs, focusDict);
+
+        }
+        public void VisualizeCorrelationsCSV(string csvData)
+        {
+            // Split the CSV string into lines
+            //var lines = csvData.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+            var lines = Regex.Split(csvData, "\r\n|\n")
+                             .Where(line => !string.IsNullOrWhiteSpace(line))
+                             .ToArray();
 
 
+            // Extract the headers and rows
+            var headers = lines[0].Split(',').Select(h => h.Trim()).ToList();
+            var dataRows = lines.Skip(1).Select(line => line.Split(',').Select(value => value.Trim()).ToList()).ToList();
 
+            // Separate parameter names and output names
+            
+            int paramCount = headers.IndexOf(headers.First(h => h.Contains("out:")));  // Assumes "output1" marks the start of output columns
+            var paramNames = headers.Take(paramCount).ToList();
+            var outputNames = headers.Skip(paramCount).ToList();
 
+            // Create samples and allOutputs lists
+            var samples = new List<Dictionary<string, string>>();
+            var allOutputs = new List<List<double>>();
+
+            // Process each data row
+            foreach (var row in dataRows)
+            {
+                var sample = new Dictionary<string, string>();
+                for (int i = 0; i < paramCount; i++)
+                {
+                    sample[paramNames[i]] = row[i];
+                }
+                samples.Add(sample);
+
+                List<double> outputs = new List<double>();
+                for (int i = 0; i < outputNames.Count; i++)
+                {
+                    var output = row[i + paramCount];
+                    if (outputNames[i].Contains("out:"))
+                    {
+                        outputs.Add(double.Parse(output));
+                    }
+                    
+                }
+                allOutputs.Add(outputs);
+
+                // Add output values for this row
+                //var outputs = row.Skip(paramCount).Select(double.Parse).ToList();
+               
+            }
+
+            // Call the function with the prepared inputs
+            ComputeThenVisualizeCorrelations(paramNames, samples, allOutputs, null);
+        }
+
+        private void ComputeThenVisualizeCorrelations(List<string> paramNames, List<Dictionary<string, string>> samples, List<List<double>> allOutputs, Dictionary<string, int> focusDict)
+        {
             //------------- calculating and sending correlation results to front-end -------
             Dictionary<string, Tuple<List<double>, List<double>, List<double>>> models = new Dictionary<string, Tuple<List<double>, List<double>, List<double>>>();
             foreach (string k in paramNames)
@@ -1182,10 +1344,12 @@ namespace Unicorn.ViewModels
                     correlation = ComputeCorrelation(values, metrics);
                     LinearRegression(values, metrics, out rSquared, out yIntercept, out slope);
 
-                    int focus = (focusDict[k] == 0) || (focusDict[k] == 1 && i >= 4) || (focusDict[k] == 2 && i < 4) ? 1 : 0;
-
-
-
+                    int focus = 1;
+                    if (focusDict != null)
+                    {
+                        focus = (focusDict[k] == 0) || (focusDict[k] == 1 && i >= 4) || (focusDict[k] == 2 && i < 4) ? 1 : 0;
+                    }
+                    
                     slopes.Add(slope * focus);
                     intercepts.Add(yIntercept * focus);
                     correlations.Add(correlation * focus);
@@ -1194,7 +1358,6 @@ namespace Unicorn.ViewModels
 
                 UnicornPlugin.UIInterop.UpdateParametricAnalysisModels(k, slopes, intercepts, correlations);
             }
-            Console.WriteLine(models);
         }
 
         private List<double> getOutputsFromComputeResults(List<GrasshopperDataTree> res)
@@ -1288,16 +1451,14 @@ namespace Unicorn.ViewModels
             if (context != null && context.Count > 0)
             {
                 GrasshopperDataTree param1 = new GrasshopperDataTree("context");
-                List<GrasshopperObject> lst = new List<GrasshopperObject>() { new GrasshopperObject(context) };
-                param1.Add("0", lst);
+                param1.Add("0", context.Select(c => new GrasshopperObject(c)).ToList());
                 trees.Add(param1);
             }
 
             if (alt.interiorWalls != null && alt.interiorWalls.Count > 0)
             {
                 GrasshopperDataTree param1 = new GrasshopperDataTree("interior_walls");
-                List<GrasshopperObject> lst = new List<GrasshopperObject>() { new GrasshopperObject(alt.interiorWalls) };
-                param1.Add("0", lst);
+                param1.Add("0", alt.interiorWalls.Select(c => new GrasshopperObject(c)).ToList());
                 trees.Add(param1);
             }
 
@@ -1308,33 +1469,6 @@ namespace Unicorn.ViewModels
                 trees.Add(param1);
                 List<Point3d> c2 = alt.walls.Select(w => w.GetBoundingBox(true).Center).ToList();
 
-            }
-
-            if (alt.paramterizedWalls != null && alt.paramterizedWalls.Count > 0)
-            {
-
-                GrasshopperDataTree param1 = new GrasshopperDataTree("parametrized_walls");
-                param1.Add("0", alt.paramterizedWalls.Select(w => new GrasshopperObject(w)).ToList());
-                trees.Add(param1);
-
-                Dictionary<string, List<double>> aggregatedParamsData = new Dictionary<string, List<double>>();
-                aggregatedParamsData["Ws Length"] = new List<double>();
-                aggregatedParamsData["Ws Height"] = new List<double>();
-
-                foreach (Brep k in alt.paramterizedWallsData.Keys)
-                {
-                    Dictionary<string, string> d = alt.paramterizedWallsData[k];
-                    aggregatedParamsData["Ws Length"].Add(double.Parse(d["W Length"]));
-                    aggregatedParamsData["Ws Height"].Add(double.Parse(d["W Height"]));
-                };
-
-                GrasshopperDataTree p1 = new GrasshopperDataTree("Ws Length");
-                p1.Add("0", aggregatedParamsData["Ws Length"].Select(w => new GrasshopperObject(w)).ToList());
-                trees.Add(p1);
-
-                GrasshopperDataTree p2 = new GrasshopperDataTree("Ws Height");
-                p2.Add("0", aggregatedParamsData["Ws Height"].Select(w => new GrasshopperObject(w)).ToList());
-                trees.Add(p2);
             }
 
             try
@@ -1454,14 +1588,14 @@ namespace Unicorn.ViewModels
                 else if (values[i].ParamName.Contains("wall_facing_directions"))
                 {
                     List<int> tmp = new List<int>();
-
+                    // 0 for North, 1 for East, 2 for West, 3 for South
                     foreach (KeyValuePair<string, List<GrasshopperObject>> pair in values[i].InnerTree)
                     {
                         List<int> parsed = pair.Value.Select(o => int.Parse(o.Data)).ToList();
                         wallDirections = parsed;
                         alt.wallDirections = wallDirections;
                     }
-
+                    UnicornPlugin.UIInterop.UpdateUIData("wallDirections", alt.wallDirections);
                 }
 
                 // ...iterate through data tree structure...
@@ -1539,7 +1673,6 @@ namespace Unicorn.ViewModels
                                         ro.Attributes.ObjectColor = System.Drawing.Color.LightBlue;
                                         ro.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
 
-
                                         Material glassMaterial = new Rhino.DocObjects.Material
                                         {
                                             Name = "Glass",
@@ -1561,13 +1694,17 @@ namespace Unicorn.ViewModels
                                         ro.CommitChanges();
 
                                         addObjectsGuids.Add(id);
-
                                     }
                                     else if (values[i].ParamName.Contains("walls_brep"))
                                     {
                                         Guid id = doc.Objects.AddBrep((Brep)obj);
                                         addObjectsGuids.Add(id);
                                         walls[id] = (Brep)obj;
+                                    }
+                                    else if (values[i].ParamName.Contains("interior_walls"))
+                                    {
+                                        Guid id = doc.Objects.AddBrep((Brep)obj);
+                                        addObjectsGuids.Add(id);
                                     }
                                     else if (values[i].ParamName.Contains("shading_mesh"))
                                     {
@@ -1608,7 +1745,8 @@ namespace Unicorn.ViewModels
             if (updateUI)
             {
                 UnicornPlugin.UIInterop.UpdateUIOutputData(metrics);
-                UnicornPlugin.UIInterop.UpdateUIOutputDataTrees(metrics_trees);
+                UnicornPlugin.UIInterop.UpdateUIOutputDataTrees(metrics_trees);                
+                
             }
 
 
@@ -2061,6 +2199,6 @@ namespace Unicorn.ViewModels
             });
         }
 
-
+        
     }
 }

@@ -34,9 +34,13 @@
             "
           >
             <div style="display: flex; align-items: center">
-              <v-tooltip bottom>
+              <v-tooltip
+                bottom
+                open-delay="200"
+              >
                 <template #activator="{ on, attrs }">
                   <v-btn
+                    class="text-none"
                     v-bind="attrs"
                     style="width: 120px"
                     :style="[
@@ -64,7 +68,8 @@
                 </template>
                 <span>
                   The outline of the footprint. Exterior walls will be created
-                  based on this.</span>
+                  based on this.
+                </span>
               </v-tooltip>
               <v-switch
                 v-show="isZoneSet"
@@ -83,6 +88,7 @@
                       ? { 'background-color': 'white' }
                       : { 'background-color': 'lightgray' },
                   ]"
+                  class="text-none"
                   v-on="on"
                   @click="setContext"
                   @mouseenter="onHoverElements('Context', true)"
@@ -106,11 +112,13 @@
               </template>
               <span>
                 The buildings in the surrounding context. These will be included
-                in the performance calculations.</span>
+                in the performance calculations.
+              </span>
             </v-tooltip>
             <v-tooltip bottom>
               <template #activator="{ on, attrs }">
                 <v-btn
+                  class="text-none"
                   v-bind="attrs"
                   :style="[
                     isInteriorWallsSet
@@ -158,6 +166,7 @@
                           ? { 'background-color': 'white' }
                           : { 'background-color': 'lightgray' },
                       ]"
+                      class="text-none"
                       @click="setWeatherFile"
                     >
                       <svg
@@ -176,7 +185,7 @@
                     </v-btn>
                     <span
                       v-if="isWeatherFileSet"
-                      style="font-size: medium"
+                      style="font-size: medium; margin-left: 5px;"
                     >
                       <em> {{ weatherFileLocation }} </em>
                     </span>
@@ -431,6 +440,35 @@
             <!-- Walls Table-->
             <v-container>
               <v-container class="wwr_inputs_container">
+                Select By Direction:
+                <v-btn
+                  small
+                  class="analyze_button"
+                  @click="selectWindowsInDirection(0)"
+                >
+                  S
+                </v-btn>
+                <v-btn
+                  small
+                  class="analyze_button"
+                  @click="selectWindowsInDirection(1)"
+                >
+                  E
+                </v-btn>
+                <v-btn
+                  small
+                  class="analyze_button"
+                  @click="selectWindowsInDirection(3)"
+                >
+                  W
+                </v-btn>
+                <v-btn
+                  small
+                  class="analyze_button"
+                  @click="selectWindowsInDirection(2)"
+                >
+                  N
+                </v-btn>
                 <v-row
                   style="align-items: center; border-bottom: 1px gray solid"
                 >
@@ -445,9 +483,7 @@
                   </v-col>
                   <v-col> # Wall </v-col>
 
-                  <v-col>
-                    WWR
-                  </v-col>
+                  <v-col> WWR </v-col>
                   <v-col>Num. V.Shd.</v-col>
                   <v-col>V.Shd. Depth[m]</v-col>
                   <v-col>Num. H.Shd.</v-col>
@@ -526,14 +562,11 @@
             </v-container>
             <!-- Controls -->
             <v-container>
-              <div
-                style="
-             
-                  padding: 10px;
-               
-                "
-              >
-                <v-btn @click="updateWWRShading">
+              <div style="padding: 10px">
+                <v-btn
+                  class="text-none"
+                  @click="updateWWRShading"
+                >
                   Apply to Selected Walls
                 </v-btn>
                 <v-slider
@@ -801,10 +834,12 @@
                 <v-tooltip
                   v-for="(title, i) in metricsTitles.slice(0, -2)"
                   :key="i"
+                  open-delay="600"
                   bottom
                 >
                   <template #activator="{ on, attrs }">
                     <v-btn
+                      class="text-none"
                       v-bind="attrs"
                       v-on="on"
                       @click="switchDaylightMesh(i)"
@@ -855,7 +890,10 @@
                   justify-content: space-around;
                 "
               >
-                <v-tooltip bottom>
+                <v-tooltip
+                  bottom
+                  open-delay="500"
+                >
                   <template #activator="{ on, attrs }">
                     <div
                       v-bind="attrs"
@@ -988,47 +1026,61 @@
             </v-radio-group>
           </v-container>
         </v-tab-item>
-        <v-tab-item>
+        <v-tab-item
+          style="display: flex; flex-direction: column; align-items: center"
+        >
           <div
             style="display: flex; flex-direction: column; align-items: center"
           >
-            <p style="margin-top:15px; font-size: medium; text-align: center;">
-              On this panel, you can run parametric analysis studies to understand the impact that different parameters have on the performance of your design.<br>         
-              1. First pick the parameters you which to analyze. The values for the unselected parameters will be based on the current alternative.
+            <p style="margin-top: 15px; font-size: medium; text-align: center">
+              On this panel, you can run parametric analysis studies to
+              understand the impact that different parameters have on the
+              performance of your design.<br>
+              1. First pick the parameters you which to analyze. The values for
+              the unselected parameters may be based on the current alternative or custom picked values. The values set here will be applied to all walls.
             </p>
-            <v-expansion-panels 
+            <v-expansion-panels
               v-model="analyze_tab_expansion"
-              style="padding: 10px;"
+              style="padding: 10px"
               multiple
             >
               <v-expansion-panel
                 v-for="paramType in ['Geometry', 'Material']"
                 :key="paramType"
-                style="text-align: center;"
+                style="text-align: center"
               >
                 <v-expansion-panel-header>
                   {{ paramType }} Parameters
                 </v-expansion-panel-header>
                 <v-expansion-panel-content
                   class="align-center"
-                  style="text-align: -webkit-center;"
+                  style="text-align: -webkit-center"
                 >
                   <table>
                     <tr>
+                      <td
+                        colspan="2"
+                        style="font-size:small"
+                      >
+                        Check the parameters to include:
+                      </td>
                       <td />
-                      <td />
-                      <td />
-          
+
                       <td style="font-size: small; text-align: center">
                         <v-tooltip bottom>
                           <template #activator="{ on, attrs }">
-                            <div style="display: flex; flex-direction: row; align-items: center">
+                            <div
+                              style="
+                                display: flex;
+                                flex-direction: row;
+                                align-items: center;
+                              "
+                            >
                               <svg
                                 v-bind="attrs"
                                 width="20"
                                 height="20"
                                 fill="none"
-   
                                 viewBox="0 0 24 24"
                                 xmlns="http://www.w3.org/2000/svg"
                                 v-on="on"
@@ -1046,15 +1098,17 @@
                                   fill="#777777"
                                 />
                               </svg>
-                              <div style="margin-left:4px">
+                              <div style="margin-left: 4px">
                                 Num Steps
                               </div>
                             </div>
                           </template>
-                          <span>Num steps includes the min + max + steps in between.
+                          <span>
+                            Num steps includes the min + max + steps in between.
                             <br>
-                            So 2 steps means only min and max, and 3 steps adds a
-                            point in the middle to that.</span>
+                            So 2 steps means only min and max, and 3 steps adds
+                            a point in the middle to that.
+                          </span>
                         </v-tooltip>
                       </td>
                     </tr>
@@ -1077,7 +1131,7 @@
                       </td>
                       <td
                         v-if="param.checked"
-                        style="width: 180px; display: flex; flex-direction: row;"
+                        style="width: 180px; display: flex; flex-direction: row"
                       >
                         <v-text-field
                           v-model.number="param.range[0]"
@@ -1085,7 +1139,7 @@
                           label="min"
                           hide-details
                         />
-              
+
                         <v-text-field
                           v-model.number="param.range[1]"
                           type="number"
@@ -1094,13 +1148,11 @@
                         />
                       </td>
                       <td
-                        v-else
-                        style="width: 180px; color: grey;     font-size: x-small;"
+                        v-if="param.checked"
+                        style="font-size: small"
                       >
-                        Same value as the current alt.
-                      </td>
-                      <td style="font-size: small">
                         <v-select
+                          v-show="param.checked"
                           v-model="param.size"
                           style="width: 70px; margin-left: 5px"
                           density="compact"
@@ -1110,14 +1162,51 @@
                           @change="updateParametricAnalysisData()"
                         />
                       </td>
+                      <td 
+                        v-else
+                        colspan="2"
+                        style="width: 180px; color: grey; font-size: x-small"
+                      >
+                        <v-radio-group
+                          v-model="paramAnalysisDefaultValueOption"
+                          class="paramAnalysisDefaultRadioGroup"
+                          hide-details
+                          row
+                          mandatory
+                        >
+                          <template #label>
+                            <div style="font-size: small">
+                              Values to use:
+                            </div>
+                          </template>
+                          <v-radio
+                            label="Same as the current alt."
+                            :value="true"
+                            style="font-size: x-small"
+                          />
+                          <v-radio
+                            label="Override default value"
+                            :value="false"
+                            style="font-size: x-small"
+                          />
+                          <v-text-field
+                            v-show="!paramAnalysisDefaultValueOption"
+                            
+                            label="New Value"
+                            type="number"
+                            style="width: 40px;"
+                          />
+                        </v-radio-group>
+                      </td>
                     </tr>
                   </table>
                 </v-expansion-panel-content>
               </v-expansion-panel>
             </v-expansion-panels>
-
-            <p style="font-size: medium;">
-              2. Then run the analysis. You can run an estimate first to get a sense of how long the whole process will take.
+            <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
+            <p style="font-size: medium">
+              2. Then run the analysis. You can run an estimate first to get a
+              sense of how long the whole process will take.
             </p>
             <div
               style="display: flex; flex-direction: row; align-items: baseline"
@@ -1201,30 +1290,67 @@
                   border-left: black solid 1px;
                 "
               >
-                <v-tooltip bottom>
-                  <template #activator="{ on, attrs }">
-                    <v-btn
-                      v-bind="attrs"
-                      v-on="on"
-                      @click="runParametricAnalysis(true)"
-                    >
-                      Estimate
-                      <VueElementLoading
-                        :active="showSpinnerParametricAnalysisEstimate"
-                        spinner="spinner"
-                      />
-                    </v-btn>
-                  </template>
-                  <span>Runs a single sample to get an estimate for how long will
-                    all samples take</span>
-                </v-tooltip>
-                <span style="font-size: medium">Single Sample Time:
+                <div
+                  style="
+                  display: flex;
+                  flex-direction: row;
+                  align-items: center;"
+                >
+                  <v-tooltip bottom>
+                    <template #activator="{ on, attrs }">
+                      <v-btn
+                        class="text-none"
+                        v-bind="attrs"
+                        v-on="on"
+                        @click="runParametricAnalysis(true)"
+                      >
+                        Estimate
+                        <VueElementLoading
+                          :active="showSpinnerParametricAnalysisEstimate"
+                          spinner="spinner"
+                        />
+                      </v-btn>
+                    </template>
+                    <span>
+                      Runs a single sample to get an estimate for how long will
+                      all samples take
+                    </span>
+                  </v-tooltip>
+                  <v-tooltip bottom>
+                    <template #activator="{ on, attrs }">
+                      <v-btn
+                        v-bind="attrs"
+                        :disabled="
+                          parametricAnalysisProgress != -1 ||
+                            parametricAnalysisDataSelected.length <= 1
+                        "
+                        style="width: 200px"
+                        class="analyze_button text-none"
+                        variant="plain"
+                        v-on="on"
+                        @click="runParametricAnalysis()"
+                      >
+                        <span v-show="!showSpinnerParametricAnalysis">Run Analysis</span>
+                        <VueElementLoading
+                          :active="showSpinnerParametricAnalysis"
+                          spinner="spinner"
+                        />
+                      </v-btn>
+                    </template>
+                    <span>
+                      Runs the full analysis.
+                    </span>
+                  </v-tooltip>
+                </div>
+                <span style="font-size: medium">
+                  Single Sample Time:
                   {{
                     parametricAnalysisLatestDiff > 0
                       ? round2(parametricAnalysisLatestDiff / 1000)
                       : "--"
                   }}
-                  Secs</span>
+                  Secs
+                </span>
 
                 <div style="font-size: medium">
                   Total time needed:
@@ -1245,7 +1371,7 @@
                 </div>
               </div>
             </div>
-
+            <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
             <div
               style="
                 display: flex;
@@ -1257,48 +1383,41 @@
               <div
                 style="
                   display: flex;
-                  flex-direction: row;
+                  flex-direction: column;
                   align-items: center;
                   padding: 10px;
                 "
               >
-                <v-btn
-                  :disabled="
-                    parametricAnalysisProgress != -1 ||
-                      parametricAnalysisDataSelected.length <= 1
-                  "
-                  style="width: 200px"
-                  class="analyze_button"
-                  variant="plain"
-                  @click="runParametricAnalysis()"
-                >
-                  <span v-show="!showSpinnerParametricAnalysis">Run Analysis</span>
-                  <VueElementLoading
-                    :active="showSpinnerParametricAnalysis"
-                    spinner="spinner"
+                <p style="font-size: medium">
+                  3. When the analysis is completed, charts will be shown below. <br>
+                  The bar charts indicate which parameters have the highest impact on
+                  each performance metric. The Design Explorer can be used to explore and filter the design space.
+                </p>
+                <div>
+                  <v-select
+                    v-model="currentAnalysisName"
+                    label="Select Analysis"
+                    :items="sortedAnalysisFolders"
+                    sort
                   />
-                </v-btn>
-                <v-btn
-                  style="width: 200px"
-                  class="analyze_button"
-                  variant="plain"
-                  @click="openAnalysisFolder()"
-                >
-                  Analysis Folder
-                </v-btn>
+                  <v-btn
+                    style="width: 200px"
+                    class="analyze_button text-none"
+                    variant="plain"
+                    @click="visualizeAnalysis()"
+                  >
+                    Visualize
+                  </v-btn>
+                  <v-btn
+                    style="width: 200px"
+                    class="analyze_button text-none"
+                    variant="plain"
+                    @click="openAnalysisFolder()"
+                  >
+                    Analysis Folder
+                  </v-btn>
+                </div>
               </div>
-
-              <div v-show="debug">
-                <div>{{ parametricAnalysisSamples }}</div>
-
-                <div>{{ parametricAnalysisModelsSlopes }}</div>
-                <div>{{ parametricAnalysisModelsIntercepts }}</div>
-                <div>{{ parametricAnalysisModelsCorrelations }}</div>
-                <div>{{ parametricAnalysisSortedFilteredSensitivites }}</div>
-              </div>
-              <p style="font-size: medium;">
-                3. When the analysis is done, charts will be shown below. <br> Each chart indicates which parameters have the highest impact on each performance metric.
-              </p>
               <div
                 style="
                   display: flex;
@@ -1314,47 +1433,54 @@
                   :data="o.children"
                 />
               </div>
-
-              <div v-show="debug">
-                <div
-                  v-for="param in Object.keys(parametricAnalysisModelsSlopes)"
-                  :key="param"
-                  style="
-                    display: flex;
-                    flex-direction: row;
-                    align-items: center;
-                  "
-                >
-                  <div style="width: 85px; font-size: small">
-                    {{ param }}
-                  </div>
-                </div>
-                <v-slider
-                  v-model="notableSlopeThreshold"
-                  :min="0"
-                  :max="1"
-                  :step="0.05"
-                  show-ticks="always"
-                  tick-size="4"
-                  label="Slope Threhold"
-                  hide-details
-                  style="width: 300px"
-                  @end="updateMaxParametricAnalysisRegression"
-                >
-                  <template #append>
-                    <v-text-field
-                      v-model="notableSlopeThreshold"
-                      type="number"
-                      style="width: 40px"
-                      class="ma-0 pa-0"
-                      density="compact"
-                      hide-details
-                      variant="outlined"
-                    />
-                  </template>
-                </v-slider>
+            </div>
+          </div>
+          <iframe
+            v-show="showAnalysisVisualization"
+            id="visualize_iframe"
+            src="DesignExplorer-gh-pages\index.html"
+            width="1200"
+            height="800"
+          />
+          <div v-if="debug">
+            <div>{{ parametricAnalysisSamples }}</div>
+            <div>{{ parametricAnalysisModelsSlopes }}</div>
+            <div>{{ parametricAnalysisModelsIntercepts }}</div>
+            <div>{{ parametricAnalysisModelsCorrelations }}</div>
+            <div>{{ parametricAnalysisSortedFilteredSensitivites }}</div>
+            <div
+              v-for="param in Object.keys(parametricAnalysisModelsSlopes)"
+              :key="param"
+              style="display: flex; flex-direction: row; align-items: center"
+            >
+              <div style="width: 85px; font-size: small">
+                {{ param }}
               </div>
             </div>
+            <v-slider
+              v-model="notableSlopeThreshold"
+              :min="0"
+              :max="1"
+              :step="0.05"
+              show-ticks="always"
+              tick-size="4"
+              label="Slope Threhold"
+              hide-details
+              style="width: 300px"
+              @end="updateMaxParametricAnalysisRegression"
+            >
+              <template #append>
+                <v-text-field
+                  v-model="notableSlopeThreshold"
+                  type="number"
+                  style="width: 40px"
+                  class="ma-0 pa-0"
+                  density="compact"
+                  hide-details
+                  variant="outlined"
+                />
+              </template>
+            </v-slider>
           </div>
         </v-tab-item>
       </v-tabs-items>
@@ -1369,7 +1495,6 @@ import StackedBarChart from "./StackedBarChart";
 import DivergingBarChart from "./DivergingBarChart";
 import Vue from "vue";
 import AltCard from "./AltCard.vue";
-
 
 export default {
   components: {
@@ -1592,6 +1717,7 @@ export default {
       enable_overhangs: false,
       shadingDeviceType: "Vertical",
 
+      wallDirections: [],
       selectedWallsNums: [],
       selectedWallsNumsSorted: [],
       isContextSet: false,
@@ -1603,6 +1729,10 @@ export default {
       selectedWallsCheckboxes: [false, false, false, false],
       selectAllCheckbox: false,
       selected_option_comparison: "",
+
+      analysisFolders: [],
+      currentAnalysisName: null,
+      showAnalysisVisualization: false,
 
       // Outputs
       da_metrics: [],
@@ -1737,6 +1867,7 @@ export default {
       parametricAnalysisNumSamples: 0,
       parametricAnalysisMinNumSamples: 16,
       parametricAnalysisMaxNumSamples: 150,
+      paramAnalysisDefaultValueOption: true,
       parametricAnalysisDataSelected: [],
       parametricAnalysisData: [
         //Geometry Params
@@ -1942,7 +2073,7 @@ export default {
   computed: {
     parametricAnalysisSamples() {
       var combinedSamples = [];
-    
+
       if (this.parametricAnalysisDataSelected.length <= 1)
         return combinedSamples;
 
@@ -1981,7 +2112,6 @@ export default {
           samplesMatrix,
           combinedSamples
         );
-
       } else {
         let numSamples = this.parametricAnalysisNumSamples;
 
@@ -2034,6 +2164,9 @@ export default {
 
       return combinedSamples;
     },
+    sortedAnalysisFolders() {
+        return [...this.analysisFolders].sort().reverse();
+    },
     parametricAnalysisSortedFilteredSensitivites() {
       let copy = JSON.parse(
         JSON.stringify(this.parametricAnalysisSortedSensitivites)
@@ -2049,6 +2182,15 @@ export default {
     },
   },
   watch: {
+    sortedAnalysisFolders: {
+      handler: function(newValue) {
+        if(newValue && newValue.length > 0)
+        {
+          this.currentAnalysisName = newValue[0]
+        }
+        
+      }
+    },
     parametricAnalysisData: {
       handler: function () {
         this.updateParametricAnalysisData();
@@ -2056,39 +2198,25 @@ export default {
       deep: true,
     },
     WWRInput: {
-      handler: function () {
-  
-      },
+      handler: function () {},
     },
     vShadingCountInput: {
-      handler: function () {
-       
-      },
+      handler: function () {},
     },
     vShadingDepthInput: {
-      handler: function () {
-
-      },
+      handler: function () {},
     },
     hShadingCountInput: {
-      handler: function () {
- 
-      },
+      handler: function () {},
     },
     hShadingDepthInput: {
-      handler: function () {
-        
-      },
+      handler: function () {},
     },
     overhangsOffsetInput: {
-      handler: function () {
-
-      },
+      handler: function () {},
     },
     overhangsDepthInput: {
-      handler: function () {
-
-      },
+      handler: function () {},
     },
     selected_option_comparison: {
       handler: function (newValue) {
@@ -2159,6 +2287,11 @@ export default {
           // comparision tab
           this.updateAlts();
         }
+        else if (newVal == 3) {
+          // comparision tab
+          this.updateAnalysisFolder();
+        }
+
       },
     },
   },
@@ -2183,6 +2316,8 @@ export default {
     window.onWallSelectedInRhino = this.onWallSelectedInRhino;
     window.updateAlts = this.updateAlts;
     window.updateCurrentAlt = this.updateCurrentAlt;
+
+    window.visualizeAnalysisData = this.visualizeAnalysisData;
 
     this.updateParametricAnalysisData();
   },
@@ -2233,8 +2368,6 @@ export default {
           .map((x) => x.size)
           .reduce((x, y) => x * y, 1);
 
-      
-
       this.$forceUpdate();
       //let numSamples =    Math.round(
       //  this.parametricAnalysisTotalNumSamples *
@@ -2246,6 +2379,68 @@ export default {
       //  Math.min(numSamples, this.parametricAnalysisMaxNumSamples),
       //  this.parametricAnalysisMinNumSamples
       //);
+    },
+    visualizeAnalysis() {
+      if (window.Interop && this.currentAnalysisName != null) {
+        window.Interop.visualizeAnalysis(this.currentAnalysisName);
+        this.showAnalysisVisualization = true;
+      }
+    },
+    csvJSON(csv) {
+      var lines = csv.split("\n");
+
+      var result = [];
+
+      // NOTE: If your columns contain commas in their values, you'll need
+      // to deal with those before doing the next step
+      // (you might convert them to &&& or something, then covert them back later)
+      // jsfiddle showing the issue https://jsfiddle.net/
+      var headers = lines[0].split(",");
+
+      for (var i = 1; i < lines.length; i++) {
+        var obj = {};
+        var currentline = lines[i].split(",");
+
+        for (var j = 0; j < headers.length; j++) {
+          obj[headers[j]] = currentline[j];
+        }
+
+        result.push(obj);
+      }
+
+      //return result; //JavaScript object
+      return result; //JSON
+    },
+    visualizeAnalysisData(data) {
+      var visFrame = document.getElementById("visualize_iframe");
+
+      const filteredData = this.csvJSON(data).filter((obj) => {
+        return Object.values(obj).every((value) => value !== undefined);
+      });
+      console.log(
+        visFrame,
+        visFrame.contentWindow,
+        data,
+        this.csvJSON(data),
+        filteredData
+      );
+      document.addEventListener
+      if (visFrame != null) {
+        visFrame.contentWindow.unloadPageContent();
+        visFrame.contentWindow.loadDataToDesignExplorer(filteredData);
+        visFrame.contentWindow.loadSetting();
+        visFrame.contentWindow.addEventListener("loadToRhinoEvent", (e)=> {
+          var args = e.detail.split("/");
+          var altFullName = args[args.length - 1];
+       
+          var altName = altFullName.substring(0, altFullName.lastIndexOf('.'))
+
+          console.log("load alt to rhino", e.detail, altName)
+          if (window.Interop) {
+            window.Interop.loadAlt(altName, "analysis\\"+this.currentAnalysisName);
+          }
+        })
+      }
     },
     openAnalysisFolder() {
       if (window.Interop) {
@@ -2298,7 +2493,6 @@ export default {
       }
     },
 
-
     round2(num) {
       return Math.round((num + Number.EPSILON) * 100) / 100;
     },
@@ -2335,6 +2529,16 @@ export default {
         this.$forceUpdate();
       }
     },
+    async updateAnalysisFolder()
+    {
+      if (window.Interop) {
+        console.log("update analysis folder");
+        this.analysisFolders = JSON.parse(await window.Interop.getAnalysisFolders());
+
+        
+        this.$forceUpdate();
+      }
+    },
     async updateCurrentAlt() {
       if (window.Interop) {
         this.updateAlts();
@@ -2350,19 +2554,12 @@ export default {
     onWallSelectedInRhino(selectedWallsNums) {
       if (selectedWallsNums != null) {
         this.selectedWallsNums = JSON.parse(selectedWallsNums);
-        console.log(
-          "onWallSelectedInRhino",
-          this.selectedWallsNums,
-          this.inputs
-        );
         this.selectedWallsCheckboxes.forEach((v, i) => {
           Vue.set(this.selectedWallsCheckboxes, i, false);
         });
-        console.log(this.selectedWallsCheckboxes);
         this.selectedWallsNums.forEach((v) => {
           Vue.set(this.selectedWallsCheckboxes, v, true);
         });
-        console.log("aft", this.selectedWallsCheckboxes);
 
         if (this.selectedWallsNums.length > 0) {
           this.areWallsSelected = true;
@@ -2402,7 +2599,19 @@ export default {
         }
       }
     },
+    selectWindowsInDirection(direction) {
 
+      var allWallsInDirectionSelected = this.selectedWallsCheckboxes.filter((w,i) => this.wallDirections[i] == direction).every(w => w)
+      console.log(allWallsInDirectionSelected, this.selectedWallsCheckboxes, this.selectedWallsCheckboxes.filter((w,i) => this.wallDirections[i] == direction))
+      this.selectedWallsCheckboxes.forEach((v, i) => {
+        if(this.wallDirections[i] == direction)
+        {
+          Vue.set(this.selectedWallsCheckboxes, i, allWallsInDirectionSelected?false:true);
+        }
+      });
+
+      this.updateSelectedWalls();
+    },
     selectAllWindows(selectAll) {
       this.selectedWallsCheckboxes.forEach((v, i) => {
         Vue.set(this.selectedWallsCheckboxes, i, selectAll);
@@ -2818,6 +3027,7 @@ export default {
         this.maxParametricAnalysisRegressionIndices
       );
       this.parametric_analysis_sparklines_key += 1;
+      this.updateAnalysisFolder();
     },
     updateMaxRegression(param) {
       var maxIndices = [];
@@ -3008,5 +3218,9 @@ export default {
 
 .analyze_button {
   margin: 5px;
+}
+
+>>> .paramAnalysisDefaultRadioGroup .v-label {
+  font-size: small;
 }
 </style>

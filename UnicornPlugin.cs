@@ -112,6 +112,13 @@ namespace Unicorn
             return base.OnLoad(ref errorMessage);
         }
 
+        public string GetDataFolderPath()
+        {
+            string definitionPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            definitionPath = Path.GetDirectoryName(definitionPath);
+            return definitionPath + "\\data\\";
+        }
+
         protected override void OnShutdown()
         {
 
