@@ -1123,7 +1123,7 @@ namespace Unicorn.ViewModels
                     object val = pair.Value;
                     string key = pair.Key;
 
-                    altName += key + "_" + Math.Round(double.Parse(pair.Value), 1) + ((paramNum < alt.Keys.Count - 1) ? "_" : "");
+                    altName += paramNum + "_" + Math.Round(double.Parse(pair.Value), 1) + ((paramNum < alt.Keys.Count - 1) ? "_" : "");
 
                     // If any of these params is being analyzed, apply the same value for all walls
                     if (key.Contains("WWR_per_wall"))
