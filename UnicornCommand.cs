@@ -3,7 +3,7 @@ using Rhino.Commands;
 
 
 //Note: this is left as an example of how Rhino commands could be implemented into the pluginm i.e. just follow the format of this class.
-namespace Unicorn
+namespace DPredict
 {
     public class UnicornCommand : Command
     {

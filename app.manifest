@@ -2,11 +2,11 @@
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
   <assemblyIdentity
       type="win32"
-      name="Unicorn.Rhino.Plugin"
+      name="DPredict.Rhino.Plugin"
       version="1.2.3.4"
       processorArchitecture="x86"
     />
-  <description>Unicorn</description>
+  <description>DPredict is a performance-based design tool that empowers designers to efficiently explore building footprints and façades during the early stages of design while considering their daylighting and energy performance in a fast and intuitive manner. </description>
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
     <application>
       <!-- Windows 10/11 -->

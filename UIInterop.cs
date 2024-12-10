@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Unicorn.ViewModels;
+using DPredict.ViewModels;
 using Rhino.Compute;
 using System;
 using System.Diagnostics;
@@ -12,7 +12,7 @@ using CefSharp;
 using CefSharp.WinForms;
 #endif
 
-namespace Unicorn
+namespace DPredict
 {
     public class UIInterop
     {
@@ -84,6 +84,13 @@ namespace Unicorn
             string str = "updateParametricAnalysisModels(\"" + paramName + "\" , " + JsonConvert.SerializeObject(slopes) + "," + JsonConvert.SerializeObject(intercepts) + "," + JsonConvert.SerializeObject(correlations) + ")";
             Task<JavascriptResponse> task = Browser.EvaluateScriptAsync(str);
         }
+
+        internal void ClearParametricAnalysisModels()
+        {
+            string str = "clearParametricAnalysisModels()";
+            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync(str);
+        }
+
 
         public void UpdateUIOutputData(Dictionary<string, List<double>> objects)
         {
@@ -247,7 +254,9 @@ namespace Unicorn
             Rhino.RhinoApp.RunScript(script, false);
         }
 
-        
+  
+
+
 
 
         #endregion

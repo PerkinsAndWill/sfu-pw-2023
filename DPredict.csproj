@@ -3,8 +3,8 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <Version>1.0</Version>
-    <Title>Unicorn</Title>
-    <Description>Description of Unicorn</Description>
+    <Title>DPredict</Title>
+    <Description>DPredict is a performance-based design tool that empowers designers to efficiently explore building footprints and façades during the early stages of design while considering their daylighting and energy performance in a fast and intuitive manner. </Description>
     <TargetExt>.rhp</TargetExt>
     <UseWpf>False</UseWpf>
     <PlatformTarget>x64</PlatformTarget>

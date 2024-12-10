@@ -1,0 +1,16 @@
+0. Download these files:
+https://1sfu-my.sharepoint.com/:u:/g/personal/aabuzura_sfu_ca/EQtsIUf2xMtMvNVeixGUZ_0BZ0fo0JWxv9DV-koOj1tRzA?e=MUv2xs
+https://1sfu-my.sharepoint.com/:u:/g/personal/aabuzura_sfu_ca/EUMPvDp5bWRNsstghteNlz0BKexAnfwwpXz215LtO6zJqg?e=JOQh0j
+https://1sfu-my.sharepoint.com/:u:/g/personal/aabuzura_sfu_ca/EXdIL86oqLpNnnz31kkVNDkBCkRv2RZBY67H1muYIkG6Fg?e=Gy2LRJ
+
+1. Unblock all the zip files first.
+
+2. Install the latest Daylight plugin into C:\Users\USER\AppData\Roaming\Grasshopper\Libraries\
+
+3. Extract the content of MITACS folder.zip into the a folder named MITACS folder under C:\Users\USER\AppData\Roaming\Grasshopper\Libraries\
+
+4. Unzip the UnicornPlugin anywhere.
+recommended? C:\Program Files\Rhino 7\Plug-ins
+
+5. Start Rhino, go to Options/Plug-ins/Install then pick the Unicorn.rhp file from the folder above
+

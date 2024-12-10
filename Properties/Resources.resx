@@ -124,6 +124,9 @@
   <data name="unicorn" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\unicorn.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="dpredict" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\dpredict.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="unicorn_H1U_icon" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\unicorn_H1U_icon.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>

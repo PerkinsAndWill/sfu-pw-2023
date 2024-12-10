@@ -24,7 +24,7 @@ We need to prepare two packages and share them with potential users.
 
 The first package will be placed in Grasshopper's libraries folder.
 C:\Users\[USER]\AppData\Roaming\Grasshopper\Libraries\
-Create a folder there named 'MITACS folder' and make sure the following files are in it:
+Create a folder there named 'DPredict' and make sure the following files are in it:
 1.  Server folder
 2.  the default Vancouver weather file CAN_BC_Vancouver.Harbour.CS.712010_TMYx.2004-2018.epw (hard coded, don't change the name)
 3.  The EPC Excel file EPC_PW_1.0.xlsx (hard coded, don't change the name)

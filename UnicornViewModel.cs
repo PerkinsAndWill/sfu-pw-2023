@@ -23,7 +23,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Mesh = Rhino.Geometry.Mesh;
 
-namespace Unicorn.ViewModels
+namespace DPredict.ViewModels
 {
     /// <summary>
     /// Used internally for RestHopperObject serialization
@@ -180,7 +180,7 @@ namespace Unicorn.ViewModels
             data["win_u_val"] = 2.2;
             data["win_shgc"] = 0.3;
 
-            data["enable_energy"] = true;
+            data["enable_energy"] = false;
             data["enable_daylight"] = true;
         }
     }
@@ -346,7 +346,7 @@ namespace Unicorn.ViewModels
                             RhinoApp.WriteLine("Failed to create a new view.");
                             return;
                         }
-                        ClipInViewport(true, view.ActiveViewportID);
+                        ClipInViewport(true, view.ActiveViewportID, false);
 
                         double pad = 0.02;    // A little padding...
                         double dx = (bbox.Max.X - bbox.Min.X) * pad;
@@ -444,19 +444,19 @@ namespace Unicorn.ViewModels
 
                 Curve geometry = alternative.zone;
                 //To set an initial wwrPerWall value
-                double[] wwrPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["WWR_per_wall"]).ToObject<double[]>();
+                double[] wwrPerWall = ((JArray)alternative.data["WWR_per_wall"]).ToObject<double[]>();
 
-                int[] vShadingCountsPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["verticalShadings_multiplier"]).ToObject<int[]>();
-                double[] vShadingDepthsPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["verticalShadings_depth"]).ToObject<double[]>();
-                int[] hShadingCountsPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["horizontalShadings_multiplier"]).ToObject<int[]>();
-                double[] hShadingDepthsPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["horizontalShadings_depth"]).ToObject<double[]>();
-                double[] overhangsOffsetPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["overhangs_offset"]).ToObject<double[]>();
-                double[] overhangsDepthPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["overhangs_depth"]).ToObject<double[]>();
+                int[] vShadingCountsPerWall = ((JArray)alternative.data["verticalShadings_multiplier"]).ToObject<int[]>();
+                double[] vShadingDepthsPerWall = ((JArray)alternative.data["verticalShadings_depth"]).ToObject<double[]>();
+                int[] hShadingCountsPerWall = ((JArray)alternative.data["horizontalShadings_multiplier"]).ToObject<int[]>();
+                double[] hShadingDepthsPerWall = ((JArray)alternative.data["horizontalShadings_depth"]).ToObject<double[]>();
+                double[] overhangsOffsetPerWall = ((JArray)alternative.data["overhangs_offset"]).ToObject<double[]>();
+                double[] overhangsDepthPerWall = ((JArray)alternative.data["overhangs_depth"]).ToObject<double[]>();
 
 
-                int[] vShadingOnOffPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["verticalFnOnOff"]).ToObject<int[]>();
-                int[] hShadingOnOffPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["horizontalFnOnOff"]).ToObject<int[]>();
-                int[] overhangsOnOffPerWall = ((Newtonsoft.Json.Linq.JArray)alternative.data["overhangsOnOff"]).ToObject<int[]>();
+                int[] vShadingOnOffPerWall = ((JArray)alternative.data["verticalFnOnOff"]).ToObject<int[]>();
+                int[] hShadingOnOffPerWall = ((JArray)alternative.data["horizontalFnOnOff"]).ToObject<int[]>();
+                int[] overhangsOnOffPerWall = ((JArray)alternative.data["overhangsOnOff"]).ToObject<int[]>();
 
                 UnicornPlugin.UIInterop.SetNumWalls(wwrPerWall.Length);
                 UnicornPlugin.UIInterop.setWWRShadingPerWall(wwrPerWall, vShadingCountsPerWall, vShadingDepthsPerWall, hShadingCountsPerWall, hShadingDepthsPerWall, overhangsOffsetPerWall, overhangsDepthPerWall, vShadingOnOffPerWall, hShadingOnOffPerWall, overhangsOnOffPerWall);
@@ -464,6 +464,7 @@ namespace Unicorn.ViewModels
                 UpdateData(currentAlternative, "WWR_per_wall", wwrPerWall, true);
                 UpdateData(currentAlternative, "interior_walls", alternative.interiorWalls, true);
                 await UpdateData(currentAlternative, "zone", geometry);
+                UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", true);
             }
             else
             {
@@ -974,6 +975,10 @@ namespace Unicorn.ViewModels
         internal string[] GetAnalysisFolders()
         {
             string analysisFolder = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder;
+            if (!Directory.Exists(analysisFolder))
+            {
+                Directory.CreateDirectory(analysisFolder);
+            }
             return Directory.EnumerateDirectories(analysisFolder).Select(x => x.Substring(x.LastIndexOf("\\") + 1)).ToArray();
         }
         async internal Task RunParametricAnalysisEstimate(string sampleJSON)
@@ -1013,15 +1018,15 @@ namespace Unicorn.ViewModels
             UnicornPlugin.UIInterop.UpdateParametricAnalysisProgress(100, 0, true);
         }
 
-        internal void Clip(bool enable)
+        internal void Clip(bool enable, bool deleteCurrentClips = true)
         {
             RhinoDoc doc = RhinoDoc.ActiveDoc;
             RhinoView view = doc.Views.ActiveView;
             Guid viewportGuid = (view != null ? view : doc.Views.GetViewList(true, false)[0]).ActiveViewportID;
-            ClipInViewport(enable, viewportGuid);
+            ClipInViewport(enable, viewportGuid, deleteCurrentClips);
         }
 
-        internal void ClipInViewport(bool enable, Guid viewportGuid)
+        internal void ClipInViewport(bool enable, Guid viewportGuid, bool deleteCurrentClips = true)
         {
             if (currentAlternative != null && currentAlternative.zone != null)
             {
@@ -1030,24 +1035,28 @@ namespace Unicorn.ViewModels
                 if (currentAlternative.data["floor_to_floor"] is double)
                 {
                     double height = (double)currentAlternative.data["floor_to_floor"] - 0.25;
-                    Clip(curve, viewportGuid, enable, height);
+                    Clip(curve, viewportGuid, enable, height, deleteCurrentClips);
                 }
             }
 
         }
 
-        internal void Clip(Curve curve, Guid viewportGuid, bool enable, double height = 1)
+        internal void Clip(Curve curve, Guid viewportGuid, bool enable, double height = 1, bool deleteCurrentClips = true)
         {
             bool flip = true;
-
             RhinoDoc doc = RhinoDoc.ActiveDoc;
-            foreach (RhinoObject obj in doc.Objects)
-            {
-                if (obj is ClippingPlaneObject)
+
+            if (deleteCurrentClips)
+            {    
+                foreach (RhinoObject obj in doc.Objects)
                 {
-                    doc.Objects.Delete(obj.Id, true);
+                    if (obj is ClippingPlaneObject)
+                    {
+                        doc.Objects.Delete(obj.Id, true);
+                    }
                 }
             }
+            
 
             if (curve != null && enable)
             {
@@ -1323,6 +1332,8 @@ namespace Unicorn.ViewModels
         {
             //------------- calculating and sending correlation results to front-end -------
             Dictionary<string, Tuple<List<double>, List<double>, List<double>>> models = new Dictionary<string, Tuple<List<double>, List<double>, List<double>>>();
+            UnicornPlugin.UIInterop.ClearParametricAnalysisModels();
+
             foreach (string k in paramNames)
             {
 
@@ -1402,7 +1413,7 @@ namespace Unicorn.ViewModels
                 {
                     // Get the AppData folder path on Windows
                     string appDataPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
-                    string grasshopperLibrariesPath = Path.Combine(appDataPath, "Grasshopper", "Libraries", "MITACS folder");
+                    string grasshopperLibrariesPath = Path.Combine(appDataPath, "Grasshopper", "Libraries", "DPredict");
 
                     p = grasshopperLibrariesPath;
                 }
@@ -1494,12 +1505,12 @@ namespace Unicorn.ViewModels
                     alt.currentObjectsGuids.Clear();
 
 
-                    Layer resultsLayer = doc.Layers.FindName("UnicornResults");
+                    Layer resultsLayer = doc.Layers.FindName("DPredictResults");
                     int layerIndex = -1;
                     if (resultsLayer == null)
                     {
                         resultsLayer = new Layer();
-                        resultsLayer.Name = "UnicornResults";
+                        resultsLayer.Name = "DPredictResults";
                         layerIndex = doc.Layers.Add(resultsLayer);
                     }
                     else
@@ -1534,14 +1545,15 @@ namespace Unicorn.ViewModels
                     SwitchDaylightMesh(alt.currentDaylightMeshIndex, alt);
 
                     doc.Layers.Modify(resultsLayer, layerIndex, true);
-                    //doc.Views.Redraw();
-
-
-                    await SaveCurrentAlt("current", true);
                     doc.Views.Redraw();
-                    UnicornPlugin.UIInterop.UpdateCurrentAlt();
 
                     Clip(true);
+
+                    await SaveCurrentAlt("current", true);
+                    //doc.Views.Redraw();
+                    UnicornPlugin.UIInterop.UpdateCurrentAlt();
+
+                    
                 }
 
             }

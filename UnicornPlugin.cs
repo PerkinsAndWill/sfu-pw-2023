@@ -4,7 +4,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-namespace Unicorn
+namespace DPredict
 {
     ///<summary>
     /// <para>Every RhinoCommon .rhp assembly must have one and only one PlugIn-derived
@@ -53,9 +53,9 @@ namespace Unicorn
         protected override LoadReturnCode OnLoad(ref string errorMessage)
         {
 
-            Panels.RegisterPanel(this, typeof(UnicornPanel), "Unicorn", Unicorn.Properties.Resources.unicorn, PanelType.System);
+            Panels.RegisterPanel(this, typeof(UnicornPanel), "DPredict", DPredict.Properties.Resources.dpredict, PanelType.System);
 
-            string tmp = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Unicorn");
+            string tmp = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DPredict");
             if (!Directory.Exists(tmp))
                 Directory.CreateDirectory(tmp);
 
@@ -71,7 +71,7 @@ namespace Unicorn
                     
                     // Get the AppData folder path on Windows
                     string appDataPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
-                    string grasshopperLibrariesPath = Path.Combine(appDataPath, "Grasshopper", "Libraries", "MITACS folder");
+                    string grasshopperLibrariesPath = Path.Combine(appDataPath, "Grasshopper", "Libraries", "DPredict");
 
                     string path = grasshopperLibrariesPath;
 
@@ -124,7 +124,10 @@ namespace Unicorn
 
             if (rhinoComputeProcess != null)
             {
+                rhinoComputeProcess.Kill();
+                rhinoComputeProcess.WaitForExit(2000);
                 rhinoComputeProcess.Close();
+
             }
 
             string definitionPath = System.Reflection.Assembly.GetExecutingAssembly().Location;

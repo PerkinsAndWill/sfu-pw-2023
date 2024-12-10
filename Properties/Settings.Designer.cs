@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Unicorn.Properties {
+namespace DPredict.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

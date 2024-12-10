@@ -14,6 +14,7 @@
         <v-tab>Explore</v-tab>
         <v-tab>Compare</v-tab>
         <v-tab>Analyze</v-tab>
+        <v-tab>Visualize</v-tab>
       </v-tabs>
 
       <div class="loading-element">
@@ -1011,6 +1012,7 @@
                 :key="alt.data.num"
               >
                 <AltCard
+                  v-if="alt != null"
                   :alt="alt"
                   :benchmark-diffs="benchmark_diffs"
                   :comparision-tab-params-expansion="
@@ -1036,7 +1038,8 @@
               On this panel, you can run parametric analysis studies to
               understand the impact that different parameters have on the
               performance of your design.<br>
-              1. First pick the parameters you which to analyze. The values for
+              <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
+              1. Pick the parameters you which to analyze. The values for
               the unselected parameters may be based on the current alternative or custom picked values. The values set here will be applied to all walls.
             </p>
             <v-expansion-panels
@@ -1234,6 +1237,7 @@
                   <v-radio
                     label="LHS"
                     :value="false"
+                    disabled
                   />
                 </v-radio-group>
                 <div style="font-size: medium">
@@ -1372,76 +1376,17 @@
               </div>
             </div>
             <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
-            <div
-              style="
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 10px;
-              "
-            >
-              <div
-                style="
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  padding: 10px;
-                "
+            <p style="font-size: medium">
+              3. Then  <v-btn
+                style="width: 200px"
+                class="analyze_button text-none"
+                @click="modelling_tab = 4"
               >
-                <p style="font-size: medium">
-                  3. When the analysis is completed, charts will be shown below. <br>
-                  The bar charts indicate which parameters have the highest impact on
-                  each performance metric. The Design Explorer can be used to explore and filter the design space.
-                </p>
-                <div>
-                  <v-select
-                    v-model="currentAnalysisName"
-                    label="Select Analysis"
-                    :items="sortedAnalysisFolders"
-                    sort
-                  />
-                  <v-btn
-                    style="width: 200px"
-                    class="analyze_button text-none"
-                    variant="plain"
-                    @click="visualizeAnalysis()"
-                  >
-                    Visualize
-                  </v-btn>
-                  <v-btn
-                    style="width: 200px"
-                    class="analyze_button text-none"
-                    variant="plain"
-                    @click="openAnalysisFolder()"
-                  >
-                    Analysis Folder
-                  </v-btn>
-                </div>
-              </div>
-              <div
-                style="
-                  display: flex;
-                  flex-direction: row;
-                  flex-wrap: wrap;
-                  margin-top: 20px;
-                "
-              >
-                <DivergingBarChart
-                  v-for="o in parametricAnalysisSortedFilteredSensitivites"
-                  :key="o.id"
-                  :title="o.name"
-                  :data="o.children"
-                />
-              </div>
-            </div>
+                Visualize
+              </v-btn>
+            </p>
           </div>
-          <iframe
-            v-show="showAnalysisVisualization"
-            id="visualize_iframe"
-            src="DesignExplorer-gh-pages\index.html"
-            width="1200"
-            height="800"
-          />
+
           <div v-if="debug">
             <div>{{ parametricAnalysisSamples }}</div>
             <div>{{ parametricAnalysisModelsSlopes }}</div>
@@ -1483,6 +1428,77 @@
             </v-slider>
           </div>
         </v-tab-item>
+        <v-tab-item>
+          <div
+            style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 10px;
+              "
+          >
+            <div
+              style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  padding: 10px;
+                "
+            >
+              <p style="font-size: medium">
+                3. When the analysis is completed, charts will be shown below. <br>
+                The bar charts indicate which parameters have the highest impact on
+                each performance metric. The Design Explorer can be used to explore and filter the design space.
+              </p>
+              <div>
+                <v-select
+                  v-model="currentAnalysisName"
+                  label="Select Analysis"
+                  :items="sortedAnalysisFolders"
+                  sort
+                />
+                <v-btn
+                  style="width: 200px"
+                  class="analyze_button text-none"
+                  variant="plain"
+                  @click="visualizeAnalysis()"
+                >
+                  Visualize
+                </v-btn>
+                <v-btn
+                  style="width: 200px"
+                  class="analyze_button text-none"
+                  variant="plain"
+                  @click="openAnalysisFolder()"
+                >
+                  Analysis Folder
+                </v-btn>
+              </div>
+            </div>
+            <div
+              style="
+                  display: flex;
+                  flex-direction: row;
+                  flex-wrap: wrap;
+                  margin-top: 20px;
+                "
+            >
+              <DivergingBarChart
+                v-for="o in parametricAnalysisSortedFilteredSensitivites"
+                :key="o.id"
+                :title="o.name"
+                :data="o.children"
+              />
+            </div>
+          </div>
+          <iframe
+            v-show="showAnalysisVisualization"
+            id="visualize_iframe"
+            src="DesignExplorer-gh-pages\index.html"
+            width="1200"
+            height="800"
+          />
+        </v-tab-item>
       </v-tabs-items>
     </v-container>
   </div>
@@ -1509,7 +1525,7 @@ export default {
       debug: false,
       //Inputs
       inputs: {
-        enable_energy: true,
+        enable_energy: false,
         enable_daylight: true,
         WWR_per_wall: [0.5, 0, 0, 0],
 
@@ -1702,7 +1718,7 @@ export default {
       showSpinnerParametricAnalysis: false,
       showSpinnerParametricAnalysisEstimate: false,
 
-      isClipping: false,
+      isClipping: true,
 
       areWallsSelected: false,
       numWindowsInput: 0,
@@ -2287,8 +2303,8 @@ export default {
           // comparision tab
           this.updateAlts();
         }
-        else if (newVal == 3) {
-          // comparision tab
+        else if (newVal == 3 || newVal == 4) {
+          // analysis or visualize tab
           this.updateAnalysisFolder();
         }
 
@@ -2311,7 +2327,6 @@ export default {
     window.setWWRShadingPerWall = this.setWWRShadingPerWall;
     window.setNumWalls = this.setNumWalls;
 
-    window.setIsClipping = this.setIsClipping;
     window.updateBackendData = this.updateBackendData;
     window.onWallSelectedInRhino = this.onWallSelectedInRhino;
     window.updateAlts = this.updateAlts;
@@ -2424,7 +2439,7 @@ export default {
         this.csvJSON(data),
         filteredData
       );
-      document.addEventListener
+     
       if (visFrame != null) {
         visFrame.contentWindow.unloadPageContent();
         visFrame.contentWindow.loadDataToDesignExplorer(filteredData);
@@ -2462,7 +2477,6 @@ export default {
             {
               WWR_per_wall: 0.4,
               floor_to_floor: 3.2,
-              verticalShadings_multiplier: 4,
             },
           ];
 
@@ -2534,8 +2548,6 @@ export default {
       if (window.Interop) {
         console.log("update analysis folder");
         this.analysisFolders = JSON.parse(await window.Interop.getAnalysisFolders());
-
-        
         this.$forceUpdate();
       }
     },
@@ -2972,6 +2984,11 @@ export default {
       }
       this.stacked_bar_key += 1;
       this.$forceUpdate();
+    },
+    clearParametricAnalysisModels() {
+      this.parametricAnalysisModelsSlopes = {};
+      this.parametricAnalysisModelsIntercepts = {};
+      this.parametricAnalysisModelsIntercepts = {};
     },
     updateParametricAnalysisModels(param, slopes, intercepts, correlations) {
       console.log("updateParametricAnalysisModels", param, slopes, intercepts);

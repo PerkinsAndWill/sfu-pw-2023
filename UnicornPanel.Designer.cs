@@ -1,4 +1,4 @@
-﻿namespace Unicorn
+﻿namespace DPredict
 {
     partial class UnicornPanel
     {

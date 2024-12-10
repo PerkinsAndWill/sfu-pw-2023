@@ -5,6 +5,7 @@ using Rhino.Geometry.Intersect;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Cache;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 
@@ -98,6 +99,10 @@ namespace Rhino.Compute
             request.ContentType = "application/json";
             request.UserAgent = $"compute.rhino3d.cs/{Version}";
             request.Method = "POST";
+            // Define a cache policy for this request only.
+            HttpRequestCachePolicy noCachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+            request.CachePolicy = noCachePolicy;
+            
 
             // try auth token (compute.rhino3d.com only)
             if (!string.IsNullOrWhiteSpace(AuthToken))

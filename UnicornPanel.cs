@@ -7,7 +7,7 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
 
-namespace Unicorn
+namespace DPredict
 {
     /// <summary>
     /// This is the user control that is buried in the tabbed, docking panel.
@@ -107,15 +107,13 @@ namespace Unicorn
             // var index = @"C:\dev\v4design\V4D4Rhino\V4D4RhinoViewer\v4d4rhinoviewer\public\";
 
 #else
-            //use app files
+            //use the built vue app files
 
             string appDataPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
-            string grasshopperLibrariesPath = Path.Combine(appDataPath, "Grasshopper", "Libraries", "MITACS folder");
+            string grasshopperLibrariesPath = Path.Combine(appDataPath, "Grasshopper", "Libraries", "DPredict");
             var path = grasshopperLibrariesPath;
 
-            Debug.WriteLine(path, "Unicorn");
-
-            var indexPath = string.Format(@"{0}\app\index.html", path);
+            var indexPath = string.Format(@"{0}\dist\index.html", path);
             if (!File.Exists(indexPath))
                 Debug.WriteLine("Unicorn: Error. The html file doesn't exists : {0}", "Unicorn");
 
