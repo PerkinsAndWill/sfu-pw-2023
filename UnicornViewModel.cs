@@ -22,9 +22,25 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Mesh = Rhino.Geometry.Mesh;
+using Excel = Microsoft.Office.Interop.Excel;
+using System.Runtime.InteropServices;
+using System.Windows;
 
 namespace DPredict.ViewModels
 {
+    public static class ProcessUtility
+    {
+        [DllImport("user32.dll")]
+        static extern int GetWindowThreadProcessId(int hWnd, out int lpdwProcessId);
+
+        public static Process GetExcelProcess(Excel.Application excelApp)
+        {
+            int id;
+            GetWindowThreadProcessId(excelApp.Hwnd, out id);
+            return Process.GetProcessById(id);
+        }
+    }
+
     /// <summary>
     /// Used internally for RestHopperObject serialization
     /// </summary>
@@ -210,6 +226,7 @@ namespace DPredict.ViewModels
         Alternative currentAlternative;
         internal List<GeometryBase> context = new List<GeometryBase>();
         internal List<Guid> contextGuids = new List<Guid>();
+        internal string epcSpreadsheet = "";
 
         DateTime lastRequestDate;
 
@@ -538,6 +555,7 @@ namespace DPredict.ViewModels
             RhinoDoc.DeselectAllObjects += DeselectAllObjects;
             RhinoDoc.DeselectObjects += OnSelectObjects;
             RhinoDoc.EndOpenDocument += InitDoc;
+            RhinoDoc.CloseDocument += CloseExcelAndDelete;
             Rhino.UI.Panels.Show += OnShowPanel;
 
             UnicornPlugin.ServerLoaded += () =>
@@ -561,8 +579,75 @@ namespace DPredict.ViewModels
             };
 
             InitDataOnView();
+
+            InitEpcSpreadsheet();
         }
         static int glassMaterialIndex = 0;
+
+        private void InitEpcSpreadsheet()
+        {
+            // create copy of EPC excel spreadsheet and store filename
+            string originalExcelPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Grasshopper", "Libraries", "DPredict", "Daylight", "EPC_PW_1.0.xlsx");
+            string excelPath = Path.Combine(Path.GetTempPath(), String.Format("EPC_PW_1.0_{0}.xlsx", Guid.NewGuid()));
+            File.Copy(originalExcelPath, excelPath);
+            epcSpreadsheet = excelPath;
+        }
+
+        private void CloseExcelAndDelete(object sender, EventArgs e)
+        {
+            Process process = null;
+            try
+            {
+                // first get running excel app & workbook
+                Excel.Workbook workbook = null;
+                Excel.Application excelApp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
+                foreach (Excel.Workbook xlWorkbook in excelApp.Workbooks)
+                {
+                    if (xlWorkbook.FullName == epcSpreadsheet)
+                    {
+                        workbook = xlWorkbook;
+                        break;
+                    }
+                }
+
+                if (workbook != null)
+                {
+                    process = ProcessUtility.GetExcelProcess(excelApp);
+                    // then close/quit
+                    workbook.Close(false);
+                    excelApp.Quit();
+
+                    Marshal.ReleaseComObject(workbook);
+                    Marshal.ReleaseComObject(excelApp.Workbooks);
+                    Marshal.ReleaseComObject(excelApp.Worksheets);
+                    Marshal.ReleaseComObject(excelApp);
+
+                    workbook = null;
+                    excelApp = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
+            //last delete file
+            try
+            {
+                File.Delete(epcSpreadsheet);
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"{ex.Message}");
+            }
+
+            if (process != null)
+            {
+                process.Kill();
+            }
+
+        }
+
 
         private void InitDoc(object sender, DocumentOpenEventArgs e)
         {
@@ -584,6 +669,7 @@ namespace DPredict.ViewModels
                 UnicornPlugin.UIInterop.UpdateUIData("isContextSet", true);
             });
         }
+
         internal  void SetInteriorWalls(List<GeometryBase> geometries)
         {
             Task.Run(async () =>
@@ -592,8 +678,6 @@ namespace DPredict.ViewModels
                 UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", true);
             });
         }
-
-
 
         internal void SetZone(Curve geometry, bool fresh = true)
         {
@@ -850,7 +934,7 @@ namespace DPredict.ViewModels
             }
 
         }
-            internal void SetInteriorWalls2()
+        internal void SetInteriorWalls2()
         {
             // do something
             Rhino.DocObjects.ObjRef[] objsRef = new Rhino.DocObjects.ObjRef[0];
@@ -1480,6 +1564,13 @@ namespace DPredict.ViewModels
                 trees.Add(param1);
                 List<Point3d> c2 = alt.walls.Select(w => w.GetBoundingBox(true).Center).ToList();
 
+            }
+
+            {
+                GrasshopperDataTree param1 = new GrasshopperDataTree("epcSpreadsheet");
+                List<GrasshopperObject> lst = new List<GrasshopperObject>() { new GrasshopperObject(epcSpreadsheet) };
+                param1.Add("0", lst);
+                trees.Add(param1);
             }
 
             try
