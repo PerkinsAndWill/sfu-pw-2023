@@ -782,7 +782,7 @@
                         v-model="overhangsDepthInput"
                         :disabled="!enable_overhangs"
                         :min="0"
-                        :max="1"
+                        :max="2"
                         :step="0.05"
                         show-ticks="always"
                         tick-size="4"
