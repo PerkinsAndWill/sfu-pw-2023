@@ -356,8 +356,12 @@ namespace DPredict.ViewModels
                         // Calculate the bounding box on the 
                         BoundingBox bbox = zone.GetBoundingBox(false);
 
+                        // Store current view
+                        RhinoView oldView = doc.Views.ActiveView;
+                        int index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldView.ActiveViewportID);
+                        bool oldViewMaximized = oldView.Maximized;
                         // Create and set up a new view
-                        RhinoView view = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(0, 0, 800, 600), true);
+                        RhinoView view = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(-800, -600, 800, 600), true);
                         if (view == null)
                         {
                             RhinoApp.WriteLine("Failed to create a new view.");
@@ -411,6 +415,9 @@ namespace DPredict.ViewModels
 
                         // Close the custom view after capture
                         view.Close();
+                        doc.NamedViews.Restore(index, oldView.ActiveViewport);
+                        oldView.Maximized = oldViewMaximized;
+                        oldView.Redraw();
                     });
                 }
                 catch (Exception ex)
@@ -709,16 +716,19 @@ namespace DPredict.ViewModels
                     Console.WriteLine("errr");
                 }
 
-                if (fresh || (!fresh && !(numSegments == wwrPerWall.Length && numSegments == vShadingCountsPerWall.Length && numSegments == vShadingDepthsPerWall.Length && numSegments == hShadingCountsPerWall.Length && numSegments == hShadingDepthsPerWall.Length && numSegments == overhangsOffsetPerWall.Length && numSegments == overhangsDepthsPerWall.Length && numSegments == overhangsOnOff.Length && numSegments == horizontalFnOnOff.Length && numSegments == verticalFnOnOff.Length)))
+                if (fresh || (!fresh && !(numSegments == wwrPerWall.Length && numSegments == vShadingCountsPerWall.Length && 
+                    numSegments == vShadingDepthsPerWall.Length && numSegments == hShadingCountsPerWall.Length && 
+                    numSegments == hShadingDepthsPerWall.Length && numSegments == overhangsOffsetPerWall.Length && 
+                    numSegments == overhangsDepthsPerWall.Length && numSegments == overhangsOnOff.Length && 
+                    numSegments == horizontalFnOnOff.Length && numSegments == verticalFnOnOff.Length)))
                 {
-                    wwrPerWall = Enumerable.Repeat(0.00, numSegments).ToArray();
-                    wwrPerWall[0] = 0.5;
-                    vShadingCountsPerWall = Enumerable.Repeat<int>(0, numSegments).ToArray();
-                    vShadingDepthsPerWall = Enumerable.Repeat<double>(0.65, numSegments).ToArray();
-                    hShadingCountsPerWall = Enumerable.Repeat<int>(0, numSegments).ToArray();
-                    hShadingDepthsPerWall = Enumerable.Repeat<double>(0.65, numSegments).ToArray();
+                    wwrPerWall = Enumerable.Repeat(0.3, numSegments).ToArray();
+                    vShadingCountsPerWall = Enumerable.Repeat<int>(5, numSegments).ToArray();
+                    vShadingDepthsPerWall = Enumerable.Repeat<double>(0.0, numSegments).ToArray();
+                    hShadingCountsPerWall = Enumerable.Repeat<int>(5, numSegments).ToArray();
+                    hShadingDepthsPerWall = Enumerable.Repeat<double>(0.0, numSegments).ToArray();
                     overhangsOffsetPerWall = Enumerable.Repeat<double>(0.0, numSegments).ToArray();
-                    overhangsDepthsPerWall = Enumerable.Repeat<double>(0.65, numSegments).ToArray();
+                    overhangsDepthsPerWall = Enumerable.Repeat<double>(0.0, numSegments).ToArray();
 
 
                     verticalFnOnOff = Enumerable.Repeat<int>(0, numSegments).ToArray();
