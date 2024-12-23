@@ -149,9 +149,23 @@ namespace DPredict.ViewModels
         internal string weatherLocation;
         internal int currentDaylightMeshIndex = 0;
 
+        public static string RandomHexString(int len)
+        {
+            Random rdm = new Random();
+
+            var hex = "0123456789ABCDEF";
+            var output = "";
+            for (var i = 0; i < len; ++i)
+            {
+                output += hex[(int)Math.Floor(rdm.NextDouble() * hex.Length)];
+            }
+            return output;
+        }
+
         internal Alternative()
         {
-            data["num"] = DateTime.Now.ToString().GetHashCode().ToString("x");
+            data["num"] = RandomHexString(5);
+            data["name"] = "";
 
             data["WWR_per_wall"] = new double[] { 0.00, 0.00, 0.00, 0.00 };
 
@@ -232,6 +246,7 @@ namespace DPredict.ViewModels
 
         internal Task SaveCurrentAlt(string name, bool isAutomatedSave)
         {
+            // isAutomatedSave: determines if save current or save a copy
             return SaveCustomViewAlt(currentAlternative.currentObjectsGuids, currentAlternative.zone, name, isAutomatedSave);
         }
 
@@ -357,9 +372,14 @@ namespace DPredict.ViewModels
                         BoundingBox bbox = zone.GetBoundingBox(false);
 
                         // Store current view
-                        RhinoView oldView = doc.Views.ActiveView;
-                        int index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldView.ActiveViewportID);
-                        bool oldViewMaximized = oldView.Maximized;
+                        RhinoView oldView = null;
+                        int index = -1;
+                        bool oldViewMaximized = false;
+                        if (doc.Views.ActiveView != null) {
+                            oldView = doc.Views.ActiveView;
+                            index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldView.ActiveViewportID);
+                            oldViewMaximized = oldView.Maximized;
+                        }
                         // Create and set up a new view
                         RhinoView view = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(-800, -600, 800, 600), true);
                         if (view == null)
@@ -387,18 +407,15 @@ namespace DPredict.ViewModels
                         // Capture the view to a bitmap
                         Bitmap bm = view.CaptureToBitmap(new Size(view.ActiveViewport.Size.Width, view.ActiveViewport.Size.Height), displaymode);
 
-                        currentAlternative.imageBytes = ImageToBase64String(bm);
-                        if (name == "current")
-                        {
-                            currentAlternative.data["isCurrent"] = true;
-                            currentAlternative.data["num"] = RandomHexString(5);
+                        // TODO: delete clipping plane from line 370
 
-                        }
-                        else
+                        currentAlternative.imageBytes = ImageToBase64String(bm);
+                        string number = currentAlternative.data["num"].ToString();  // keep the record
+                        if (!isAutomatedSave) // save as a copy
                         {
-                            currentAlternative.data["isCurrent"] = false;
-                            currentAlternative.data["num"] = RandomHexString(5);
+                            currentAlternative.data["num"] = Alternative.RandomHexString(5);
                         }
+                        currentAlternative.data["name"] = name;
                         currentAlternative.timestamp = DateTime.Now.ToString();
 
                         string json = JsonConvert.SerializeObject(currentAlternative, GeometryResolver.Settings);
@@ -409,15 +426,29 @@ namespace DPredict.ViewModels
                             Directory.CreateDirectory(savingFolder);
                         }
 
-                        string altFileName = name;
+                        string altFileName = currentAlternative.data["num"].ToString();
                         string combined = Path.Combine(savingFolder, altFileName + ".json");
                         File.WriteAllText(combined, json);
 
+                        // restore original number, reset name
+                        currentAlternative.data["num"] = number;
+                        currentAlternative.data["name"] = "";
+
                         // Close the custom view after capture
                         view.Close();
-                        doc.NamedViews.Restore(index, oldView.ActiveViewport);
-                        oldView.Maximized = oldViewMaximized;
-                        oldView.Redraw();
+
+                        // restore previous view
+                        if (oldView != null)
+                        {
+                            doc.NamedViews.Restore(index, oldView.ActiveViewport);
+                            oldView.Maximized = oldViewMaximized;
+                            oldView.Redraw();
+                        }
+
+                        if (!isAutomatedSave)
+                        {
+                            UnicornPlugin.UIInterop.UpdateAlts();
+                        }
                     });
                 }
                 catch (Exception ex)
@@ -426,20 +457,6 @@ namespace DPredict.ViewModels
                 }
             });
         }
-
-        private static string RandomHexString(int len)
-        {
-            Random rdm = new Random();
-
-            var hex = "0123456789ABCDEF";
-            var output = "";
-            for (var i = 0; i < len; ++i)
-            {
-                output += hex[(int)Math.Floor(rdm.NextDouble() * hex.Length)];
-            }
-            return output;
-        }
-
 
 
         async internal void LoadAltAsCurrent(string name, string subfolder = "")
@@ -507,6 +524,7 @@ namespace DPredict.ViewModels
             if (File.Exists(fileToDelete))
             {
                 File.Delete(fileToDelete);
+                UnicornPlugin.UIInterop.UpdateAlts();
             }
         }
 
@@ -665,7 +683,6 @@ namespace DPredict.ViewModels
         internal void InitDataOnView()
         {
             currentAlternative = new Alternative();
-
         }
 
         internal void SetContext(List<GeometryBase> geometries)
@@ -690,6 +707,8 @@ namespace DPredict.ViewModels
         {
             Task.Run(async () =>
             {
+                //Asign a new ID
+                UnicornPlugin.UIInterop.SetUniqueSessionAltNum(currentAlternative.data["num"].ToString());
 
                 //To set an initial wwrPerWall value
                 int numSegments = geometry.DuplicateSegments().Count();

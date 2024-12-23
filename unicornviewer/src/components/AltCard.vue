@@ -51,7 +51,7 @@
             </svg> </v-btn></span>
       </span>
       <span v-else>
-        <span> {{ alt.data.num }} </span>
+        <span> {{ alt.data.num }}  {{ alt.data.name}} </span>
         <v-btn
           style="position: absolute; right: 50px"
           :icon="true"
@@ -206,23 +206,23 @@ export default {
   methods: {
     saveAlt() {
       if (window.Interop) {
-        if (this.save_alt_name == null || this.save_alt_name == "") {
-          this.save_alt_name = this.genHexString(5);
+        if (this.save_alt_name == null) {
+            this.save_alt_name = "";
         }
         window.Interop.saveAlt(this.save_alt_name);
 
         this.$emit("on-save-alt");
       }
     },
-    loadAlt(name) {
+    loadAlt(number) {
       if (window.Interop) {
-        window.Interop.loadAlt(name);
+        window.Interop.loadAlt(number);
       }
     },
-    deleteAlt(name) {
+    deleteAlt(number) {
       if (window.Interop) {
-        window.Interop.deleteAlt(name);
-        this.$emit("on-delete-alt");
+        window.Interop.deleteAlt(number);
+        this.$emit("on-delete-alt");  // TODO: remove because the required actions are handled by delete function. delete is async wich causes problems if we rely on this event
       }
     },
   },

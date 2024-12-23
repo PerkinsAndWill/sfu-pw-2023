@@ -1749,6 +1749,7 @@ export default {
       analysisFolders: [],
       currentAnalysisName: null,
       showAnalysisVisualization: false,
+      uniqueSessionAltNum: "",
 
       // Outputs
       da_metrics: [],
@@ -2279,9 +2280,9 @@ export default {
       },
     },
     alts: {
-      handler: function (newAlts) {
-        this.currentAlt = newAlts.filter((obj) => obj.data.isCurrent)[0];
-        this.otherAlts = newAlts.filter((obj) => !obj.data.isCurrent);
+        handler: function (newAlts) {
+            this.currentAlt = newAlts.filter((obj) => obj.data.num == this.uniqueSessionAltNum)[0];
+            this.otherAlts = newAlts.filter((obj) => !(obj.data.num == this.uniqueSessionAltNum));
         console.log("alts handler", newAlts, this.sortCompareAltsByMetric);
         this.otherAlts.sort((x, y) => {
           if (this.sortCompareAltsByMetric === "timestamp") {
@@ -2326,6 +2327,7 @@ export default {
       this.updateParametricAnalysisProgress;
     window.setWWRShadingPerWall = this.setWWRShadingPerWall;
     window.setNumWalls = this.setNumWalls;
+    window.setUniqueSessionAltNum = this.setUniqueSessionAltNum;
 
     window.updateBackendData = this.updateBackendData;
     window.onWallSelectedInRhino = this.onWallSelectedInRhino;
@@ -2337,6 +2339,11 @@ export default {
     this.updateParametricAnalysisData();
   },
   methods: {
+
+      setUniqueSessionAltNum(num) {
+          this.uniqueSessionAltNum = JSON.parse(num);
+    },
+
     updateSelectedWalls() {
       var selected = [];
       this.selectedWallsCheckboxes.forEach((c, i) => {

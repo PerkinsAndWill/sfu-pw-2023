@@ -52,6 +52,11 @@ namespace DPredict
             Browser.EvaluateScriptAsync("updateCurrentAlt()");
         }
 
+        public void SetUniqueSessionAltNum(string num)
+        {
+            Browser.EvaluateScriptAsync("setUniqueSessionAltNum", JsonConvert.SerializeObject(num));
+        }
+
         public void UpdateParametricAnalysisProgress(int progress, int samplesLeft, bool isEstimate)
         {
             Browser.EvaluateScriptAsync("updateParametricAnalysisProgress", JsonConvert.SerializeObject(progress), JsonConvert.SerializeObject(samplesLeft), JsonConvert.SerializeObject(isEstimate));
