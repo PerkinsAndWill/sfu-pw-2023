@@ -12,7 +12,7 @@
           alt.data.num === selectedOptionComparison ? 'red 2px solid' : 'none',
       },
     ]"
-    width="280"
+    width="300"
     height="492"
   >
     <div style="display: flex; flex-direction: row; justify-content: ">
@@ -96,7 +96,7 @@
     </div>
 
     <v-img
-      width="220"
+      width="260"
       height="220"
       style="margin: 10px; flex-grow: 0; margin-top: 5px"
       :src="'data:image/jpeg;base64,' + alt.imageBytes"
