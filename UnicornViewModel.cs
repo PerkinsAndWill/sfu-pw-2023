@@ -445,10 +445,7 @@ namespace DPredict.ViewModels
                             oldView.Redraw();
                         }
 
-                        if (!isAutomatedSave)
-                        {
-                            UnicornPlugin.UIInterop.UpdateAlts();
-                        }
+                        UnicornPlugin.UIInterop.UpdateAlts();
                     });
                 }
                 catch (Exception ex)
@@ -466,14 +463,18 @@ namespace DPredict.ViewModels
             if (File.Exists(fileToLoad))
             {
                 Alternative alternative = LoadAlt(fileToLoad);
+                // update current registered
+                //UnicornPlugin.UIInterop.SetUniqueSessionAltNum(alternative.data["num"].ToString());
 
                 // Clean up geometery of old alternative
                 currentAlternative.currentObjectsGuids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
                 currentAlternative.currentObjectsGuids.Clear();
                 RhinoDoc.ActiveDoc.Objects.Delete(currentAlternative.zoneGuid, true);
 
-
+                string num = currentAlternative.data["num"].ToString();
                 currentAlternative = alternative;
+                currentAlternative.data["num"] = num;
+                currentAlternative.data["name"] = "";
 
                 // update the guids to point to  zone and interior walls of the loaded alternative
                 currentAlternative.zoneGuid = RhinoDoc.ActiveDoc.Objects.Add(alternative.zone);
@@ -1669,7 +1670,7 @@ namespace DPredict.ViewModels
 
                     Clip(true);
 
-                    await SaveCurrentAlt("current", true);
+                    await SaveCurrentAlt(currentAlternative.data["name"].ToString(), true);
                     //doc.Views.Redraw();
                     UnicornPlugin.UIInterop.UpdateCurrentAlt();
 

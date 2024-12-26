@@ -192,7 +192,7 @@ export default {
   data() {
     return {
       comparisionTabParamsExpansion: [0],
-      save_alt_name: this.alt.data.num,
+      save_alt_name: this.alt.data.name,
     };
   },
   watch: {
