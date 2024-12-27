@@ -1258,7 +1258,7 @@
                     parametricAnalysisProgress == 0
                       ? "..."
                       : parametricAnalysisTimeEstimate > 60
-                        ? parametricAnalysisTimeEstimate / 60 + " mins"
+                        ? round2(parametricAnalysisTimeEstimate / 60) + " mins"
                         : parametricAnalysisTimeEstimate + " secs"
                   }}
                 </div>
@@ -1326,7 +1326,7 @@
                         v-bind="attrs"
                         :disabled="
                           parametricAnalysisProgress != -1 ||
-                            parametricAnalysisDataSelected.length <= 1
+                            parametricAnalysisDataSelected.length < 1
                         "
                         style="width: 200px"
                         class="analyze_button text-none"
@@ -1360,15 +1360,12 @@
                   Total time needed:
                   {{
                     parametricAnalysisLatestDiff > 0
-                      ? Math.round(
-                        (((isUsingFullFactorialSampling
+                      ? round2(
+                        ((isUsingFullFactorialSampling
                           ? parametricAnalysisTotalNumSamples
                           : parametricAnalysisNumSamples) *
                           (parametricAnalysisLatestDiff / 1000)) /
-                          60 +
-                          Number.EPSILON) *
-                          100
-                      ) / 100
+                          60)
                       : "--"
                   }}
                   mins
@@ -2091,10 +2088,10 @@ export default {
     parametricAnalysisSamples() {
       var combinedSamples = [];
 
-      if (this.parametricAnalysisDataSelected.length <= 1)
+      if (this.parametricAnalysisDataSelected.length < 1)
         return combinedSamples;
 
-      if (this.isUsingFullFactorialSampling) {
+          if (this.isUsingFullFactorialSampling) {
         const samplesMatrix = this.parametricAnalysisDataSelected.map(
           (pData) => {
             const range = pData.range[1] - pData.range[0];
@@ -2104,7 +2101,7 @@ export default {
             for (var i = 0; i < pData.size - 2; i++) {
               var val = pData.range[0] + (i + 1) * stepSize;
               if (pData.isInt) {
-                val = Math.trunc(val);
+                val = Math.trunc(val + 0.5);
               }
 
               samples.push(val);
@@ -2114,7 +2111,7 @@ export default {
           }
         );
 
-        const cartesian = (...a) =>
+        const cartesian = (...a) => a.length == 1 ? a[0].map(el => [el]) :
           a.reduce((a, b) => a.flatMap((d) => b.map((e) => [d, e].flat())));
 
         combinedSamples = cartesian(...samplesMatrix).map((arr) => {
