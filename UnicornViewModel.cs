@@ -1272,6 +1272,9 @@ namespace DPredict.ViewModels
                     else if (key == "verticalShadings_depth" || key == "horizontalShadings_depth")
                     {
                         val = Enumerable.Repeat(double.Parse(pair.Value), numWalls).ToArray();
+                        int[] enableShading = Enumerable.Repeat(1, numWalls).ToArray();
+                        string whichShadingDevice = key == "verticalShadings_depth" ? "verticalFnOnOff" : "horizontalFnOnOff";
+                        UpdateData(benchmark, whichShadingDevice, enableShading, true, false, false);
                     }
 
                     else if (key == "overhangs_offset" || key == "overhangs_depth")
