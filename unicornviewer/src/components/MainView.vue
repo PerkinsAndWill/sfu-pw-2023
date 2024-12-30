@@ -1171,7 +1171,7 @@
                         style="width: 180px; color: grey; font-size: x-small"
                       >
                         <v-radio-group
-                          v-model="paramAnalysisDefaultValueOption"
+                          v-model="param.defaultValueOption"
                           class="paramAnalysisDefaultRadioGroup"
                           hide-details
                           row
@@ -1193,7 +1193,7 @@
                             style="font-size: x-small"
                           />
                           <v-text-field
-                            v-show="!paramAnalysisDefaultValueOption"
+                            v-show="!param.defaultValueOption"
                             
                             label="New Value"
                             type="number"
@@ -1237,7 +1237,7 @@
                   <v-radio
                     label="LHS"
                     :value="false"
-                    disabled
+                    
                   />
                 </v-radio-group>
                 <div style="font-size: medium">
@@ -1881,7 +1881,7 @@ export default {
       parametricAnalysisNumSamples: 0,
       parametricAnalysisMinNumSamples: 16,
       parametricAnalysisMaxNumSamples: 150,
-      paramAnalysisDefaultValueOption: true,
+      //paramAnalysisDefaultValueOption: true,
       parametricAnalysisDataSelected: [],
       parametricAnalysisData: [
         //Geometry Params
@@ -1892,7 +1892,8 @@ export default {
           type: "Geometry",
           focus: 0,
           checked: true,
-          size: 2,
+              size: 2,
+          defaultValueOption: true,
         },
         /*
         {
@@ -1939,7 +1940,8 @@ export default {
           type: "Geometry",
           focus: 0,
           checked: true,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
 
         {
@@ -1950,7 +1952,8 @@ export default {
           focus: 0,
           checked: false,
           size: 2,
-          isInt: true,
+            isInt: true,
+            defaultValueOption: true,
         },
         {
           title: "Vertical Shading Depth [m]",
@@ -1959,7 +1962,8 @@ export default {
           type: "Geometry",
           focus: 0,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         {
           title: "Horizontal Shading Count",
@@ -1969,7 +1973,8 @@ export default {
           focus: 0,
           checked: false,
           size: 2,
-          isInt: true,
+            isInt: true,
+            defaultValueOption: true,
         },
         {
           title: "Horizontal Shading Depth [m]",
@@ -1978,7 +1983,8 @@ export default {
           type: "Geometry",
           focus: 0,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         {
           title: "Overhangs Offset",
@@ -1987,7 +1993,8 @@ export default {
           type: "Geometry",
           focus: 0,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         {
           title: "Overhangs Depth [m]",
@@ -1996,7 +2003,8 @@ export default {
           type: "Geometry",
           focus: 0,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         //Material Params
         {
@@ -2006,7 +2014,8 @@ export default {
           type: "Material",
           focus: 1,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         {
           title: "Roof R-Value [IP]",
@@ -2015,7 +2024,8 @@ export default {
           type: "Material",
           checked: false,
           focus: 1,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         {
           title: "Window U-Value [SI]",
@@ -2024,7 +2034,8 @@ export default {
           type: "Material",
           focus: 1,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         {
           title: "Window SHGC [%]",
@@ -2033,7 +2044,8 @@ export default {
           type: "Material",
           focus: 1,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         /* This value is fixed in the GH defintion so varying it here will have no impact
        {
@@ -2052,7 +2064,8 @@ export default {
           type: "Material",
           focus: 2,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         {
           title: "Floor Refl. [%]",
@@ -2061,7 +2074,8 @@ export default {
           type: "Material",
           focus: 2,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         {
           title: "Wall Refl. [%]",
@@ -2070,7 +2084,8 @@ export default {
           type: "Material",
           focus: 2,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
         {
           title: "Glazing VTL [%]",
@@ -2079,9 +2094,10 @@ export default {
           type: "Material",
           focus: 2,
           checked: false,
-          size: 2,
+            size: 2,
+            defaultValueOption: true,
         },
-      ],
+        ],
     };
   },
   computed: {
