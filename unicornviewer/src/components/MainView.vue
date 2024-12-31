@@ -1194,7 +1194,7 @@
                           />
                           <v-text-field
                             v-show="!param.defaultValueOption"
-                            
+                            v-model="parametricAnalysisOverrides[param.name]"
                             label="New Value"
                             type="number"
                             style="width: 40px;"
@@ -1881,7 +1881,7 @@ export default {
       parametricAnalysisNumSamples: 0,
       parametricAnalysisMinNumSamples: 16,
       parametricAnalysisMaxNumSamples: 150,
-      //paramAnalysisDefaultValueOption: true,
+      parametricAnalysisOverrides: {},
       parametricAnalysisDataSelected: [],
       parametricAnalysisData: [
         //Geometry Params
@@ -2506,7 +2506,8 @@ export default {
         } else {
           window.Interop.runParametricAnalysis(
             JSON.stringify(this.parametricAnalysisSamples),
-            JSON.stringify(focusDict)
+              JSON.stringify(focusDict),
+            JSON.stringify(this.parametricAnalysisOverrides),
           );
         }
       }

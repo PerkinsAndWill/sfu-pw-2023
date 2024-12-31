@@ -1210,12 +1210,13 @@ namespace DPredict.ViewModels
         }
         static string parametricAnalysisFolder = "analysis";
 
-        async internal Task RunParametricAnalysis(string samplesJSON, string focusDictStr)
+        async internal Task RunParametricAnalysis(string samplesJSON, string focusDictStr, string overrideParams)
         {
 
             Dictionary<string, int> focusDict = JsonConvert.DeserializeObject<Dictionary<string, int>>(focusDictStr);
 
             List<Dictionary<string, string>> samples = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(samplesJSON);
+            Dictionary<string, string> paramOverrides = JsonConvert.DeserializeObject<Dictionary<string, string>>(overrideParams);
             List<List<GrasshopperDataTree>> results = new List<List<GrasshopperDataTree>>();
             List<List<double>> allOutputs = new List<List<double>>();
             UnicornPlugin.UIInterop.UpdateParametricAnalysisProgress(0, samples.Count, false);
@@ -1230,8 +1231,15 @@ namespace DPredict.ViewModels
             }
 
             int num = 0;
-            foreach (Dictionary<string, string> alt in samples)
+            foreach (Dictionary<string, string> sample in samples)
             {
+                Dictionary<string, string> alt = new Dictionary<string, string>(sample);
+                // Append param overrides to alt
+                foreach (KeyValuePair<string, string> pair in paramOverrides)
+                {
+                    alt[pair.Key] = pair.Value;
+                }
+
                 Alternative benchmark = CloneAlt(currentAlternative);
                 // Setting WWRs array to zeros initially
                 int numWalls = ((double[])benchmark.data["WWR_per_wall"]).Length;
@@ -1445,7 +1453,8 @@ namespace DPredict.ViewModels
             ComputeThenVisualizeCorrelations(paramNames, samples, allOutputs, null);
         }
 
-        private void ComputeThenVisualizeCorrelations(List<string> paramNames, List<Dictionary<string, string>> samples, List<List<double>> allOutputs, Dictionary<string, int> focusDict)
+        private void ComputeThenVisualizeCorrelations(List<string> paramNames, List<Dictionary<string, string>> samples, 
+            List<List<double>> allOutputs, Dictionary<string, int> focusDict)
         {
             //------------- calculating and sending correlation results to front-end -------
             Dictionary<string, Tuple<List<double>, List<double>, List<double>>> models = new Dictionary<string, Tuple<List<double>, List<double>, List<double>>>();

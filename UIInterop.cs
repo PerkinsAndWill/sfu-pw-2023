@@ -179,9 +179,9 @@ namespace DPredict
             ViewModel.HighlightContext(highlight);
         }
 
-        public async Task RunParametricAnalysis(string input, string focusStr)
+        public async Task RunParametricAnalysis(string input, string focusStr, string overrideParams)
         {
-            await ViewModel.RunParametricAnalysis(input, focusStr);
+            await ViewModel.RunParametricAnalysis(input, focusStr, overrideParams);
         }
         public async Task RunParametricAnalysisEstimate(string input)
         {
