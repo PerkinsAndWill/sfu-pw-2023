@@ -9,6 +9,7 @@
         v-model="modelling_tab"
         color="deep-purple-accent-4"
         align-tabs="center"
+        class="fixed-tabs-bar"
       >
         <v-tab>Setup</v-tab>
         <v-tab>Explore</v-tab>
@@ -3185,6 +3186,12 @@ export default {
 };
 </script>
 <style scoped>
+.fixed-tabs-bar {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
 .container {
   padding: 10px;
 }
