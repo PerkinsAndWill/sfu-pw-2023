@@ -1028,9 +1028,7 @@
             </v-radio-group>
           </v-container>
         </v-tab-item>
-        <v-tab-item
-          style="display: flex; flex-direction: column; align-items: center"
-        >
+        <v-tab-item>
           <div
             style="display: flex; flex-direction: column; align-items: center"
           >
