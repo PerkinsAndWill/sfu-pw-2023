@@ -1358,10 +1358,10 @@ namespace DPredict.ViewModels
             {
                 return;
             }
-            var csvv = "WWR_per_wall,floor_to_floor,out:sDA,out:ASE,out:aUDI,out:MI,out:Heating,out:Cooling,img \n 0.3,2.4,20,22,26,714,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.3_floor_to_floor_2.4.png 0.3,5,36,61,55,1149,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.3_floor_to_floor_5.png\n 0.7,2.4,31,39,41,1541,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.7_floor_to_floor_2.4.png\n 0.7,5,96,97,64,3066,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.7_floor_to_floor_5.png\n";
+            var csvv = "WWR_per_wall,floor_to_floor,out:sDA,out:ASE,out:UDIa,out:MI,out:Heating,out:Cooling,img \n 0.3,2.4,20,22,26,714,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.3_floor_to_floor_2.4.png 0.3,5,36,61,55,1149,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.3_floor_to_floor_5.png\n 0.7,2.4,31,39,41,1541,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.7_floor_to_floor_2.4.png\n 0.7,5,96,97,64,3066,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.7_floor_to_floor_5.png\n";
 
             //-------------Writing to CSV -------
-            string csvHeader = String.Join(",", paramNames.ToList()) + ",out:sDA,out:ASE,out:aUDI,out:MI,out:Heating,out:Cooling,img\n";
+            string csvHeader = String.Join(",", paramNames.ToList()) + ",out:sDA,out:ASE,out:UDIa,out:MI,out:Heating,out:Cooling,img\n";
             string csvBody = "";
 
 
