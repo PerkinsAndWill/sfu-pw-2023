@@ -1807,7 +1807,7 @@ export default {
       parametricAnalysisLatestDiff: 0,
       parametricAnalysisTimeEstimate: 0,
       maxParametricAnalysisRegressionIndices: {},
-      parametricAnalysisSortedSensitivites: [],
+      parametricAnalysisSortedSensitivities: [],
       parametricAnalysisSensitivitesLimit: 4,
       notableSlopeThreshold: 0.1,
       parametricAnalysisModelsSlopes: {
@@ -2199,13 +2199,13 @@ export default {
     },
     parametricAnalysisSortedFilteredSensitivites() {
       let copy = JSON.parse(
-        JSON.stringify(this.parametricAnalysisSortedSensitivites)
+        JSON.stringify(this.parametricAnalysisSortedSensitivities)
       );
       copy.forEach((d) => {
-        d.children = d.children.slice(
-          0,
-          this.parametricAnalysisSensitivitesLimit
-        );
+          d.children = d.children.slice(
+              0,
+              this.parametricAnalysisSensitivitesLimit
+          );
       });
 
       return copy;
@@ -2415,8 +2415,10 @@ export default {
       //  this.parametricAnalysisMinNumSamples
       //);
     },
-    visualizeAnalysis() {
-      if (window.Interop && this.currentAnalysisName != null) {
+      visualizeAnalysis() {
+        if (window.Interop && this.currentAnalysisName != null) {
+            this.parametricAnalysisSortedSensitivities = [];
+            this.clearParametricAnalysisModels();
         window.Interop.visualizeAnalysis(this.currentAnalysisName);
         this.showAnalysisVisualization = true;
       }
@@ -2504,6 +2506,8 @@ export default {
             JSON.stringify(estimateSample)
           );
         } else {
+            this.parametricAnalysisSortedSensitivities = [];
+            this.clearParametricAnalysisModels();
           window.Interop.runParametricAnalysis(
             JSON.stringify(this.parametricAnalysisSamples),
               JSON.stringify(focusDict),
@@ -3009,7 +3013,7 @@ export default {
     clearParametricAnalysisModels() {
       this.parametricAnalysisModelsSlopes = {};
       this.parametricAnalysisModelsIntercepts = {};
-      this.parametricAnalysisModelsIntercepts = {};
+      this.parametricAnalysisModelsCorrelations = {};
     },
     updateParametricAnalysisModels(param, slopes, intercepts, correlations) {
       console.log("updateParametricAnalysisModels", param, slopes, intercepts);
@@ -3047,7 +3051,7 @@ export default {
         res.push(d);
       }
 
-      this.parametricAnalysisSortedSensitivites = res;
+      this.parametricAnalysisSortedSensitivities = res;
       console.log("dict", res);
 
       Object.keys(this.parametricAnalysisModelsCorrelations).forEach(
