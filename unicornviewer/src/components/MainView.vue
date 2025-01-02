@@ -1452,7 +1452,7 @@
                   v-model="currentAnalysisName"
                   label="Select Analysis"
                   :items="sortedAnalysisFolders"
-                  sort
+                  
                 />
                 <v-btn
                   style="width: 200px"
@@ -2212,15 +2212,15 @@ export default {
     },
   },
   watch: {
-    sortedAnalysisFolders: {
-      handler: function(newValue) {
-        if(newValue && newValue.length > 0)
-        {
-          this.currentAnalysisName = newValue[0]
-        }
+    //sortedAnalysisFolders: {
+    //  handler: function(newValue) {
+    //    if(newValue && newValue.length > 0)
+    //    {
+    //      this.currentAnalysisName = newValue[0]
+    //    }
         
-      }
-    },
+    //  }
+    //},
     parametricAnalysisData: {
       handler: function () {
         this.updateParametricAnalysisData();
