@@ -57,6 +57,7 @@
   
   <ItemGroup>
     <PackageReference Include="CefSharp.WinForms" Version="117.2.40" />
+    <PackageReference Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1001" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="RhinoCommon" Version="7.32.23221.10241" IncludeAssets="compile;build" />
     <PackageReference Include="RhinoWindows" Version="7.32.23221.10241" />
