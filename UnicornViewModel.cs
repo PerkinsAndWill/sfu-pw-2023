@@ -128,7 +128,7 @@ namespace DPredict.ViewModels
         internal Curve zone;
 
         [JsonProperty]
-        internal List<GeometryBase> interiorWalls = new List<GeometryBase>();
+        internal List<Curve> interiorWalls = new List<Curve>();
 
         [JsonProperty]
         internal string imageBytes;
@@ -1034,7 +1034,7 @@ namespace DPredict.ViewModels
             }
             else if (key == "interior_walls")
             {
-                alt.interiorWalls = (List<GeometryBase>)newValue;
+                alt.interiorWalls = ((IEnumerable)newValue).Cast<Curve>().ToList();
             }
             else
             {
@@ -1976,7 +1976,7 @@ namespace DPredict.ViewModels
                     bool flag = !GeometryBase.GeometryEquals(e.RhinoObject.Geometry, obj.Geometry);
                     if (flag)
                     {
-                        currentAlternative.interiorWalls[indexOfWall] = e.RhinoObject.Geometry;
+                        currentAlternative.interiorWalls[indexOfWall] = (Curve)e.RhinoObject.Geometry;
                         UpdateData(currentAlternative, "interior_walls", currentAlternative.interiorWalls);
                     }
                 }
@@ -2129,7 +2129,7 @@ namespace DPredict.ViewModels
                 int indexOfWall = currentAlternative.interiorWallsGuids.IndexOf(e.ObjectId);
                 if (indexOfWall >= 0)
                 {
-                    currentAlternative.interiorWalls[indexOfWall] = e.NewRhinoObject.Geometry;
+                    currentAlternative.interiorWalls[indexOfWall] = (Curve)e.NewRhinoObject.Geometry;
                     UpdateData(currentAlternative, "interior_walls", currentAlternative.interiorWalls);
                 }
                 else
