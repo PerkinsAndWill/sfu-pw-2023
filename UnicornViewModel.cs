@@ -581,7 +581,7 @@ namespace DPredict.ViewModels
             RhinoDoc.DeselectAllObjects += DeselectAllObjects;
             RhinoDoc.DeselectObjects += OnSelectObjects;
             RhinoDoc.EndOpenDocument += InitDoc;
-            RhinoDoc.CloseDocument += CloseExcelAndDelete;
+            RhinoApp.Closing += CloseExcelAndDelete;
             Rhino.UI.Panels.Show += OnShowPanel;
 
             UnicornPlugin.ServerLoaded += () =>
@@ -616,6 +616,10 @@ namespace DPredict.ViewModels
             string originalExcelPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Grasshopper", "Libraries", "DPredict", "Daylight", "EPC_PW_1.0.xlsx");
             string excelPath = Path.Combine(Path.GetTempPath(), String.Format("EPC_PW_1.0_{0}.xlsx", Guid.NewGuid()));
             File.Copy(originalExcelPath, excelPath);
+            if (!File.Exists(excelPath))
+            {
+                Console.WriteLine("Could not create a copy of the epc file.");
+            }
             epcSpreadsheet = excelPath;
         }
 
@@ -1230,7 +1234,26 @@ namespace DPredict.ViewModels
                 Directory.CreateDirectory(parentAnalysisFolder);
             }
 
-            int num = 0;
+            //-------------Writing to CSV -------
+            string savingFolder = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), analysisSubfolder);
+            if (!Directory.Exists(savingFolder))
+            {
+                Directory.CreateDirectory(savingFolder);
+            }
+
+            Dictionary<string, string>.KeyCollection paramNames = samples[0].Keys;
+
+            string altFileName = "data";
+            string csvLogFilepath = Path.Combine(savingFolder, altFileName + ".csv");
+
+            string csvHeader = String.Join(",", paramNames.ToList()) + ",out:sDA,out:ASE,out:UDIa,out:MI,out:Heating,out:Cooling,img\n";
+            using (var sw = new StreamWriter(csvLogFilepath))
+            {
+                sw.Write(csvHeader);
+            }
+            //--------------end csv prep
+
+                int num = 0;
             foreach (Dictionary<string, string> sample in samples)
             {
                 Dictionary<string, string> alt = new Dictionary<string, string>(sample);
@@ -1314,88 +1337,75 @@ namespace DPredict.ViewModels
                 }
                 altNames.Add(altName);
 
-                List<GrasshopperDataTree> res = await UpdateData(benchmark, "ready", true, false, false, false);
-
-                if (res != null)
+                try
                 {
-                    results.Add(res);
-                    List<double> outputs = getOutputsFromComputeResults(res);
-                    allOutputs.Add(outputs);
+                    List<GrasshopperDataTree> res = await UpdateData(benchmark, "ready", true, false, false, false);
 
-                    bool takeSreenshot = true;
-                    if (takeSreenshot)
+                    if (res != null)
                     {
-                        RhinoDoc doc = RhinoDoc.ActiveDoc;
+                        results.Add(res);
+                        List<double> outputs = getOutputsFromComputeResults(res);
+                        allOutputs.Add(outputs);
 
-                        List<Guid> guids = CollectResults(res, ref benchmark, false);
+                        bool takeSreenshot = true;
+                        if (takeSreenshot)
+                        {
+                            RhinoDoc doc = RhinoDoc.ActiveDoc;
 
-                        SwitchDaylightMesh(0, benchmark).Wait();
+                            List<Guid> guids = CollectResults(res, ref benchmark, false);
 
-                        List<Guid> visibleGuids = guids.Select(id => doc.Objects.Find(id)).Where(obj => obj != null).Where(obj => !obj.IsHidden).Select(obj => obj.Id).ToList();
+                            SwitchDaylightMesh(0, benchmark).Wait();
 
-                        double height = benchmark.data["floor_to_floor"] is double ? (double)benchmark.data["floor_to_floor"] : 3.2;
+                            List<Guid> visibleGuids = guids.Select(id => doc.Objects.Find(id)).Where(obj => obj != null).Where(obj => !obj.IsHidden).Select(obj => obj.Id).ToList();
 
-                        SaveObjectsToImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
+                            double height = benchmark.data["floor_to_floor"] is double ? (double)benchmark.data["floor_to_floor"] : 3.2;
+
+                            SaveObjectsToImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
 
 
-                        guids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
-                        guids.Clear();
-                        doc.Views.Redraw();
+                            guids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
+                            guids.Clear();
+                            doc.Views.Redraw();
 
+                        }
+
+
+                        //---------------log results to csv
+                        List<double> allValues = new List<double>();
+                        //Adding all the inputs
+                        foreach (string vs in sample.Values)
+                        {
+                            double v = double.Parse(vs);
+                            allValues.Add(v);
+                        }
+                        //Adding all the outputs
+                        allValues.AddRange(outputs.Take(6));
+                        var imgURL = "http://localhost:3000/" + analysisSubfolder + "/" + (altName + ".png");
+                        string csvLine = string.Join(",", allValues) + "," + imgURL + "\n";
+                        using (var sw = File.AppendText(csvLogFilepath))
+                        {
+                            sw.Write(csvLine);
+                        }
+                        //--------------end log results to csv
                     }
                 }
+                catch (Exception e)
+                {
+                    RhinoApp.Write(String.Format("{0}\n{1}", e.Message, e.StackTrace));
+                }
 
-
+                
                 num++;
                 int progressPerc = (int)(((num * 1.0) / samples.Count) * 100);
 
                 UnicornPlugin.UIInterop.UpdateParametricAnalysisProgress(progressPerc, samples.Count - num, false);
             }
 
-            Dictionary<string, string>.KeyCollection paramNames = samples[0].Keys;
-
-            if (allOutputs.Count == 0)
-            {
-                return;
-            }
-            var csvv = "WWR_per_wall,floor_to_floor,out:sDA,out:ASE,out:UDIa,out:MI,out:Heating,out:Cooling,img \n 0.3,2.4,20,22,26,714,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.3_floor_to_floor_2.4.png 0.3,5,36,61,55,1149,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.3_floor_to_floor_5.png\n 0.7,2.4,31,39,41,1541,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.7_floor_to_floor_2.4.png\n 0.7,5,96,97,64,3066,0,0,http://localhost:3000/analysis/0.49_3-11-2024/WWR_per_wall_0.7_floor_to_floor_5.png\n";
-
-            //-------------Writing to CSV -------
-            string csvHeader = String.Join(",", paramNames.ToList()) + ",out:sDA,out:ASE,out:UDIa,out:MI,out:Heating,out:Cooling,img\n";
-            string csvBody = "";
-
-
-            for (int sampleNum = 0; sampleNum < samples.Count; sampleNum++)
-            {
-                List<double> allValues = new List<double>();
-
-                Dictionary<string, string> s = samples[sampleNum];
-                //Adding all the inputs
-                foreach (string vs in s.Values)
-                {
-                    double v = double.Parse(vs);
-                    allValues.Add(v);
-                }
-                //Adding all the outputs
-                allValues.AddRange(allOutputs[sampleNum].Take(6));
-                var imgURL = "http://localhost:3000/" + analysisSubfolder + "/" + (altNames[sampleNum] + ".png");
-                csvBody += string.Join(",", allValues) + "," + imgURL + "\n";
-            }
-
-            string csv = csvHeader + csvBody;
-            string savingFolder = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), analysisSubfolder);
-            if (!Directory.Exists(savingFolder))
-            {
-                Directory.CreateDirectory(savingFolder);
-            }
-            string altFileName = "data";
-            string combined = Path.Combine(savingFolder, altFileName + ".csv");
-
-            File.WriteAllText(combined, csv);
             //------------- calculating and sending correlation results to front-end -------
-
-            
-            ComputeThenVisualizeCorrelations(paramNames.ToList(), samples, allOutputs, focusDict);
+            if (allOutputs.Count > 0)
+            {
+                ComputeThenVisualizeCorrelations(paramNames.ToList(), samples, allOutputs, focusDict);
+            }
 
         }
         public void VisualizeCorrelationsCSV(string csvData)
