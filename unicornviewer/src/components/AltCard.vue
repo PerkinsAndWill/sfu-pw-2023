@@ -128,14 +128,14 @@
               <td style="padding-right: 15px">
                 {{ v[0] }} {{ metricsUnits[k] }}
               </td>
-              <td>
+              <!--<td>
                 {{
                   selectedBenchmark != null &&
                     alt.data.num !== selectedOptionComparison
                     ? benchmarkDiffs[alt.data.num][k]
                     : "..."
                 }}
-              </td>
+              </td>-->
             </tr>
           </table>
           <v-expansion-panel-content />
