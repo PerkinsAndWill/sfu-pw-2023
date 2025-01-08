@@ -284,7 +284,7 @@
                     :step="1"
                     show-ticks="always"
                     tick-size="4"
-                    label="Numbert of Floors"
+                    label="Number of Floors"
                     hide-details
                     @end="
                       updateBackendData(
