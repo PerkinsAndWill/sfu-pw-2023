@@ -972,7 +972,7 @@
               v-model="sortCompareAltsByMetric"
               label="Sort By:"
               density="compact"
-              :items="['timestamp', ...metricsTitles]"
+              :items="['Timestamp', ...metricsTitles]"
               item-text="name"
               style="margin-top: 10px; width: 200px; flex-grow: inherit"
               outlined
@@ -1798,7 +1798,7 @@ export default {
       alts: [],
       currentAlt: null,
       otherAlts: [],
-      sortCompareAltsByMetric: "sDA",
+      sortCompareAltsByMetric: "Timestamp",
       selected_benchmark: null,
       benchmark_diffs: {},
       parametricAnalysisProgress: -1,
@@ -2297,7 +2297,7 @@ export default {
             this.otherAlts = newAlts.filter((obj) => !(obj.data.num == this.uniqueSessionAltNum));
         console.log("alts handler", newAlts, this.sortCompareAltsByMetric);
         this.otherAlts.sort((x, y) => {
-          if (this.sortCompareAltsByMetric === "timestamp") {
+          if (this.sortCompareAltsByMetric === "Timestamp") {
             return y.timestamp - x.timestamp;
           } else {
             return (
