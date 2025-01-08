@@ -299,7 +299,8 @@ namespace DPredict.ViewModels
                         // Calculate the bounding box on the 
                         BoundingBox bbox = alt.zone.GetBoundingBox(false);
 
-                        Clip(alt.zone, view.ActiveViewportID, true, height);
+                        Guid cPlaneGuid = Guid.Empty;
+                        Clip(alt.zone, view.ActiveViewportID, ref cPlaneGuid, true, height);
 
                         const double pad = 0.02;    // A little padding...
                         double dx = (bbox.Max.X - bbox.Min.X) * pad;
@@ -338,6 +339,12 @@ namespace DPredict.ViewModels
                         {
                             Rhino.RhinoDoc.ActiveDoc.Objects.Show(obj.Id, true);
                         });
+
+                        // Delete clipping plane
+                        if (cPlaneGuid != Guid.Empty)
+                        {
+                            doc.Objects.Delete(cPlaneGuid, true);
+                        }
 
                         // Close the custom view after capture
                         view.Close();
@@ -387,7 +394,8 @@ namespace DPredict.ViewModels
                             RhinoApp.WriteLine("Failed to create a new view.");
                             return;
                         }
-                        ClipInViewport(true, view.ActiveViewportID, false);
+                        Guid cPlaneGuid = Guid.Empty;
+                        ClipInViewport(true, view.ActiveViewportID, ref cPlaneGuid);
 
                         double pad = 0.02;    // A little padding...
                         double dx = (bbox.Max.X - bbox.Min.X) * pad;
@@ -433,6 +441,11 @@ namespace DPredict.ViewModels
                         // restore original number, reset name
                         currentAlternative.data["num"] = number;
                         currentAlternative.data["name"] = "";
+
+                        // Delete clipping plane of custom view
+                        if (cPlaneGuid != Guid.Empty) {
+                            doc.Objects.Delete(cPlaneGuid, true);
+                        }
 
                         // Close the custom view after capture
                         view.Close();
@@ -1136,15 +1149,17 @@ namespace DPredict.ViewModels
             UnicornPlugin.UIInterop.UpdateParametricAnalysisProgress(100, 0, true);
         }
 
-        internal void Clip(bool enable, bool deleteCurrentClips = true)
+        private Guid mainViewClippingPlaneGuid = Guid.Empty;
+
+        internal void Clip(bool enable)
         {
             RhinoDoc doc = RhinoDoc.ActiveDoc;
             RhinoView view = doc.Views.ActiveView;
             Guid viewportGuid = (view != null ? view : doc.Views.GetViewList(true, false)[0]).ActiveViewportID;
-            ClipInViewport(enable, viewportGuid, deleteCurrentClips);
+            ClipInViewport(enable, viewportGuid, ref mainViewClippingPlaneGuid);
         }
 
-        internal void ClipInViewport(bool enable, Guid viewportGuid, bool deleteCurrentClips = true)
+        internal void ClipInViewport(bool enable, Guid viewportGuid, ref Guid clippingPlaneGuid)
         {
             if (currentAlternative != null && currentAlternative.zone != null)
             {
@@ -1152,46 +1167,46 @@ namespace DPredict.ViewModels
                 Curve curve = currentAlternative.zone;
                 if (currentAlternative.data["floor_to_floor"] is double)
                 {
-                    double height = (double)currentAlternative.data["floor_to_floor"] - 0.25;
-                    Clip(curve, viewportGuid, enable, height, deleteCurrentClips);
+                    double height = (double)currentAlternative.data["floor_to_floor"] + 1e-3;
+                    Clip(curve, viewportGuid, ref clippingPlaneGuid, enable, height);
                 }
             }
-
         }
 
-        internal void Clip(Curve curve, Guid viewportGuid, bool enable, double height = 1, bool deleteCurrentClips = true)
+        internal void Clip(Curve curve, Guid viewportGuid, ref Guid clippingPlaneGuid, bool enable, double height = 1)
         {
             bool flip = true;
             RhinoDoc doc = RhinoDoc.ActiveDoc;
 
-            if (deleteCurrentClips)
-            {    
-                foreach (RhinoObject obj in doc.Objects)
-                {
-                    if (obj is ClippingPlaneObject)
-                    {
-                        doc.Objects.Delete(obj.Id, true);
-                    }
-                }
+            Plane xyPlane = Plane.WorldXY;
+            Point3d center = curve.GetBoundingBox(xyPlane).Center;
+
+            if (clippingPlaneGuid != Guid.Empty) {
+                    ObjRef oRef = new ObjRef(doc, clippingPlaneGuid);
+                    center.Z = oRef.ClippingPlaneSurface().Plane.OriginZ;
+                    doc.Objects.Delete(clippingPlaneGuid, true);
+            }
+            else
+            {
+                center += Rhino.Geometry.Vector3d.ZAxis * height;
             }
             
 
             if (curve != null && enable)
             {
-                Plane xyPlane = Plane.WorldXY;
-                Point3d center = curve.GetBoundingBox(xyPlane).Center;
-                var newCenter = center + Rhino.Geometry.Vector3d.ZAxis * height;
-                xyPlane.Origin = newCenter;
 
-                Plane clippingPlane = xyPlane;
-
+                Plane clippingPlane = new Plane(center, Vector3d.XAxis, Vector3d.YAxis);
 
                 if (flip)
                     clippingPlane.Flip();
 
-                Guid id = doc.Objects.AddClippingPlane(clippingPlane, 0.5, 0.5, viewportGuid);
-                doc.Views.Redraw();
+                clippingPlaneGuid = doc.Objects.AddClippingPlane(clippingPlane, 0.5, 0.5, viewportGuid);
             }
+            if (!enable)
+            {
+                clippingPlaneGuid = Guid.Empty;
+            }
+            doc.Views.Redraw();
         }
 
         Alternative CloneAlt(Alternative alt)
