@@ -192,7 +192,7 @@ export default {
   data() {
     return {
       comparisionTabParamsExpansion: [0],
-      save_alt_name: this.alt.data.name,
+      save_alt_name: "",
     };
   },
   watch: {
@@ -210,8 +210,10 @@ export default {
             this.save_alt_name = "";
         }
         window.Interop.saveAlt(this.save_alt_name);
-
-        this.$emit("on-save-alt");
+          this.$emit("on-save-alt");
+          this.$nextTick(() => {
+              this.save_alt_name = null;
+          });
       }
     },
     loadAlt(number) {
