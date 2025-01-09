@@ -191,7 +191,7 @@ namespace DPredict.ViewModels
             data["building_type"] = 0;
 
             data["height"] = 3.2;
-            data["floor_to_floor"] = 3.2;
+            data["floor_to_floor"] = (double)3.2;
             data["footprint_offset"] = 0;
 
             data["ceiling_reflectance"] = 0.7;
@@ -250,7 +250,7 @@ namespace DPredict.ViewModels
             return SaveCustomViewAlt(currentAlternative.currentObjectsGuids, currentAlternative.zone, name, isAutomatedSave);
         }
 
-        internal Task SaveObjectsToImage(List<Guid> objectGuids, Alternative alt, double height, string name, string subfolder, bool moveFar = true)
+        internal Task SaveObjectsAndImage(List<Guid> objectGuids, Alternative alt, double height, string name, string subfolder, bool moveFar = true)
         {
             return Task.Run(() =>
             {
@@ -475,9 +475,10 @@ namespace DPredict.ViewModels
             string fileToLoad = Path.Combine(Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), subfolder), name + ".json");
             if (File.Exists(fileToLoad))
             {
+                // ensure correct alt num is registered
+                UnicornPlugin.UIInterop.SetUniqueSessionAltNum(currentAlternative.data["num"].ToString());
+
                 Alternative alternative = LoadAlt(fileToLoad);
-                // update current registered
-                //UnicornPlugin.UIInterop.SetUniqueSessionAltNum(alternative.data["num"].ToString());
 
                 // Clean up geometery of old alternative
                 currentAlternative.currentObjectsGuids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
@@ -626,7 +627,7 @@ namespace DPredict.ViewModels
         private void InitEpcSpreadsheet()
         {
             // create copy of EPC excel spreadsheet and store filename
-            string originalExcelPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Grasshopper", "Libraries", "DPredict", "Daylight", "EPC_PW_1.0.xlsx");
+            string originalExcelPath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), "Grasshopper", "Libraries", "DPredict", "Daylight", "EPC_PW_1.0.xlsx");
             string excelPath = Path.Combine(Path.GetTempPath(), String.Format("EPC_PW_1.0_{0}.xlsx", Guid.NewGuid()));
             File.Copy(originalExcelPath, excelPath);
             if (!File.Exists(excelPath))
@@ -695,7 +696,6 @@ namespace DPredict.ViewModels
         private void InitDoc(object sender, DocumentOpenEventArgs e)
         {
             Rhino.RhinoDoc.ActiveDoc.AdjustModelUnitSystem(UnitSystem.Meters, false);
-
         }
 
         internal void InitDataOnView()
@@ -725,7 +725,6 @@ namespace DPredict.ViewModels
         {
             Task.Run(async () =>
             {
-                //Asign a new ID
                 UnicornPlugin.UIInterop.SetUniqueSessionAltNum(currentAlternative.data["num"].ToString());
 
                 //To set an initial wwrPerWall value
@@ -1046,7 +1045,6 @@ namespace DPredict.ViewModels
             }
             else if (key == "context")
             {
-                
                 context = (List<GeometryBase>)newValue;
             }
             else if (key == "interior_walls")
@@ -1163,13 +1161,18 @@ namespace DPredict.ViewModels
         {
             if (currentAlternative != null && currentAlternative.zone != null)
             {
-                RhinoDoc doc = RhinoDoc.ActiveDoc;
                 Curve curve = currentAlternative.zone;
+                double height = 3.2;
                 if (currentAlternative.data["floor_to_floor"] is double)
                 {
-                    double height = (double)currentAlternative.data["floor_to_floor"] + 1e-3;
-                    Clip(curve, viewportGuid, ref clippingPlaneGuid, enable, height);
+                    height = (double)currentAlternative.data["floor_to_floor"] + 1e-3;
                 }
+                else
+                {
+                    double.TryParse(currentAlternative.data["floor_to_floor"].ToString(), out height);
+                }
+                Clip(curve, viewportGuid, ref clippingPlaneGuid, enable, height);
+
             }
         }
 
@@ -1351,6 +1354,7 @@ namespace DPredict.ViewModels
                     paramNum++;
                 }
                 altNames.Add(altName);
+                benchmark.data["num"] = altName;
 
                 try
                 {
@@ -1368,6 +1372,7 @@ namespace DPredict.ViewModels
                             RhinoDoc doc = RhinoDoc.ActiveDoc;
 
                             List<Guid> guids = CollectResults(res, ref benchmark, false);
+                            guids.AddRange(contextGuids);
 
                             SwitchDaylightMesh(0, benchmark).Wait();
 
@@ -1375,7 +1380,7 @@ namespace DPredict.ViewModels
 
                             double height = benchmark.data["floor_to_floor"] is double ? (double)benchmark.data["floor_to_floor"] : 3.2;
 
-                            SaveObjectsToImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
+                            SaveObjectsAndImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
 
 
                             guids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
@@ -1843,7 +1848,7 @@ namespace DPredict.ViewModels
                                         ro.Attributes.ObjectColor = System.Drawing.Color.LightBlue;
                                         ro.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
 
-                                        Material glassMaterial = new Rhino.DocObjects.Material
+                                        Rhino.DocObjects.Material glassMaterial = new Rhino.DocObjects.Material
                                         {
                                             Name = "Glass",
                                             DiffuseColor = System.Drawing.Color.FromArgb(80, 255, 255, 255), // Transparent white
@@ -2210,7 +2215,7 @@ namespace DPredict.ViewModels
         public static Rhino.Commands.Result AddMaterial(RhinoDoc doc, RhinoObject obj, string matName, System.Drawing.Color diffuseColor, System.Drawing.Color specularColor)
         {
             // Create a Rhino material with a texture.
-            Material rhino_material = new Rhino.DocObjects.Material
+            Rhino.DocObjects.Material rhino_material = new Rhino.DocObjects.Material
             {
                 Name = matName,
                 DiffuseColor = diffuseColor,
