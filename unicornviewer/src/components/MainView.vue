@@ -1125,7 +1125,7 @@
                           :id="param.name"
                           v-model="param.checked"
                           type="checkbox"
-                          @change="updateParametricAnalysisData()"
+                          @change="updateParametricAnalysisData(param.name)"
                         >
                       </td>
                       <td style="font-size: small">
@@ -2392,7 +2392,32 @@ export default {
         window.Interop.switchDaylightMesh(daylightMeshIndex);
       }
     },
-    updateParametricAnalysisData() {
+      updateParametricAnalysisData(paramName) {
+          // ensure that only one of {vertical, horizontal} devices are selected
+          if (!!paramName) {
+              if (paramName.includes("vertical")) {
+                  // turn off horizontal shading devices
+                  this.parametricAnalysisData.forEach(item => {
+                      if (item.name.includes("horizontal")) {
+                          item.checked = false;
+                          item.defaultValueOption = false;
+                          this.parametricAnalysisOverrides[item.name] = 0;
+                      }
+                  })
+              }
+              if (paramName.includes("horizontal")) {
+                  // turm off vertical shading devices
+                  this.parametricAnalysisData.forEach(item => {
+                      if (item.name.includes("vertical")) {
+                          item.checked = false;
+                          item.defaultValueOption = false;
+                          // override horizontal shading values to zero
+                          this.parametricAnalysisOverrides[item.name] = 0;
+                      }
+                  })
+              }
+          }
+
       this.parametricAnalysisDataSelected = this.parametricAnalysisData.filter(
         (x) => x.checked
       );
