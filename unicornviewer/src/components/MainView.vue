@@ -2474,7 +2474,20 @@ export default {
 
       //return result; //JavaScript object
       return result; //JSON
-    },
+      },
+      loadToRhino(e) {
+          {
+              var args = e.detail.split("/");
+              var altFullName = args[args.length - 1];
+
+              var altName = altFullName.substring(0, altFullName.lastIndexOf('.'))
+
+              console.log("load alt to rhino", e.detail, altName)
+              if (window.Interop) {
+                  window.Interop.loadAlt(altName, "analysis\\" + this.currentAnalysisName);
+              }
+          }
+      },
     visualizeAnalysisData(data) {
       var visFrame = document.getElementById("visualize_iframe");
 
@@ -2492,18 +2505,9 @@ export default {
       if (visFrame != null) {
         visFrame.contentWindow.unloadPageContent();
         visFrame.contentWindow.loadDataToDesignExplorer(filteredData);
-        visFrame.contentWindow.loadSetting();
-        visFrame.contentWindow.addEventListener("loadToRhinoEvent", (e)=> {
-          var args = e.detail.split("/");
-          var altFullName = args[args.length - 1];
-       
-          var altName = altFullName.substring(0, altFullName.lastIndexOf('.'))
-
-          console.log("load alt to rhino", e.detail, altName)
-          if (window.Interop) {
-            window.Interop.loadAlt(altName, "analysis\\"+this.currentAnalysisName);
-          }
-        })
+          visFrame.contentWindow.loadSetting();
+          visFrame.contentWindow.removeEventListener("loadToRhinoEvent", this.loadToRhino);
+          visFrame.contentWindow.addEventListener("loadToRhinoEvent", this.loadToRhino);
       }
     },
     openAnalysisFolder() {
