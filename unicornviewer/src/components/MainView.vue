@@ -2416,6 +2416,9 @@ export default {
                       }
                   })
               }
+              if (this.parametricAnalysisOverrides.hasOwnProperty(paramName)) {
+                  delete this.parametricAnalysisOverrides[paramName];
+              }
           }
 
       this.parametricAnalysisDataSelected = this.parametricAnalysisData.filter(
