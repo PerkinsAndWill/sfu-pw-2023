@@ -481,6 +481,7 @@ namespace DPredict.ViewModels
                 Alternative alternative = LoadAlt(fileToLoad);
 
                 // Clean up geometery of old alternative
+                // TODO: check if zone/objects exist in doc and reference instead of create them
                 currentAlternative.currentObjectsGuids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
                 currentAlternative.currentObjectsGuids.Clear();
                 RhinoDoc.ActiveDoc.Objects.Delete(currentAlternative.zoneGuid, true);
@@ -516,9 +517,10 @@ namespace DPredict.ViewModels
 
                 UnicornPlugin.UIInterop.SetNumWalls(wwrPerWall.Length);
                 UnicornPlugin.UIInterop.setWWRShadingPerWall(wwrPerWall, vShadingCountsPerWall, vShadingDepthsPerWall, hShadingCountsPerWall, hShadingDepthsPerWall, overhangsOffsetPerWall, overhangsDepthPerWall, vShadingOnOffPerWall, hShadingOnOffPerWall, overhangsOnOffPerWall);
+                // TODO: set analysis switches to ON/OFF
 
-                UpdateData(currentAlternative, "WWR_per_wall", wwrPerWall, true);
-                UpdateData(currentAlternative, "interior_walls", alternative.interiorWalls, true);
+                await UpdateData(currentAlternative, "WWR_per_wall", wwrPerWall, true);
+                await UpdateData(currentAlternative, "interior_walls", alternative.interiorWalls, true);
                 await UpdateData(currentAlternative, "zone", geometry);
                 UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", true);
             }
@@ -1324,15 +1326,23 @@ namespace DPredict.ViewModels
                     else if (key == "verticalShadings_depth" || key == "horizontalShadings_depth")
                     {
                         val = Enumerable.Repeat(double.Parse(pair.Value), numWalls).ToArray();
-                        int[] enableShading = Enumerable.Repeat(1, numWalls).ToArray();
+                        int hasShading = double.Parse(pair.Value) > 0 ? 1 : 0;
+                        int[] enableShading = Enumerable.Repeat(hasShading, numWalls).ToArray();
                         string whichShadingDevice = key == "verticalShadings_depth" ? "verticalFnOnOff" : "horizontalFnOnOff";
                         UpdateData(benchmark, whichShadingDevice, enableShading, true, false, false);
+                        // ensure the other shading device is off
+                        if (hasShading > 0)
+                        {
+                            string otherShadingDevice = key == "verticalShadings_depth" ? "horizontalFnOnOff" : "verticalFnOnOff";
+                            UpdateData(benchmark, otherShadingDevice, enableShading.Select(x => 1 - x).ToArray(), true, false, false);
+                        }
                     }
 
-                    else if (key == "overhangs_offset" || key == "overhangs_depth")
+                    else if (key == "overhangs_depth")
                     {
                         val = Enumerable.Repeat(double.Parse(pair.Value), numWalls).ToArray();
-                        int[] enableOverhangs = Enumerable.Repeat(1, numWalls).ToArray();
+                        int hasOverhangs = double.Parse(pair.Value) > 0 ? 1 : 0;
+                        int[] enableOverhangs = Enumerable.Repeat(hasOverhangs, numWalls).ToArray();
                         UpdateData(benchmark, "overhangsOnOff", enableOverhangs, true, false, false);
                     }
                     else if (key == "verticalShadings_multiplier" || key == "horizontalShadings_multiplier")
@@ -1650,7 +1660,7 @@ namespace DPredict.ViewModels
 
             try
             {
-                lastRequestDate = DateTime.Now;
+                lastRequestDate = DateTime.Now;  // TODO: this looks like it's at the wrong place
                 DateTime thisRequestDate = DateTime.Now;
 
                 result = Rhino.Compute.GrasshopperCompute.EvaluateDefinition(definitionPath, trees);
@@ -1717,7 +1727,7 @@ namespace DPredict.ViewModels
 
                     await SaveCurrentAlt(currentAlternative.data["name"].ToString(), true);
                     //doc.Views.Redraw();
-                    UnicornPlugin.UIInterop.UpdateCurrentAlt();
+                    UnicornPlugin.UIInterop.UpdateCurrentAlt();  // TODO: check what this is doing, does it properly register all params?
 
                     
                 }
