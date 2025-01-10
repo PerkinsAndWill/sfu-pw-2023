@@ -1184,15 +1184,22 @@ namespace DPredict.ViewModels
             Plane xyPlane = Plane.WorldXY;
             Point3d center = curve.GetBoundingBox(xyPlane).Center;
 
-            if (clippingPlaneGuid != Guid.Empty) {
-                    ObjRef oRef = new ObjRef(doc, clippingPlaneGuid);
-                    center.Z = oRef.ClippingPlaneSurface().Plane.OriginZ;
-                    doc.Objects.Delete(clippingPlaneGuid, true);
+            ClippingPlaneSurface cps = null;
+            if (clippingPlaneGuid != Guid.Empty)
+            {
+                ObjRef oRef = new ObjRef(doc, clippingPlaneGuid);
+                cps = oRef.ClippingPlaneSurface();
+                if (cps != null)
+                {
+                    center.Z = cps.Plane.OriginZ;
+                }
+                doc.Objects.Delete(clippingPlaneGuid, true);
             }
-            else
+            if (clippingPlaneGuid == Guid.Empty || cps == null)
             {
                 center += Rhino.Geometry.Vector3d.ZAxis * height;
             }
+            clippingPlaneGuid = Guid.Empty;
             
 
             if (curve != null && enable)
@@ -1204,10 +1211,6 @@ namespace DPredict.ViewModels
                     clippingPlane.Flip();
 
                 clippingPlaneGuid = doc.Objects.AddClippingPlane(clippingPlane, 0.5, 0.5, viewportGuid);
-            }
-            if (!enable)
-            {
-                clippingPlaneGuid = Guid.Empty;
             }
             doc.Views.Redraw();
         }
