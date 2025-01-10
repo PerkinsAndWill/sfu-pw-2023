@@ -727,7 +727,7 @@ namespace DPredict.ViewModels
             Task.Run(async () =>
             {
                 await UpdateData(currentAlternative, "context", geometries);
-                UnicornPlugin.UIInterop.UpdateUIData("isContextSet", true);
+                UnicornPlugin.UIInterop.UpdateUIData("isContextSet", geometries.Count > 0);
             });
         }
 
@@ -736,7 +736,7 @@ namespace DPredict.ViewModels
             Task.Run(async () =>
             {
                 await UpdateData(currentAlternative, "interior_walls", geometries);
-                UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", true);
+                UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", geometries.Count > 0);
             });
         }
 
@@ -922,7 +922,8 @@ namespace DPredict.ViewModels
                     }
                     else if (result == GetResult.Nothing)
                     {
-                        RhinoApp.WriteLine("Selection was canceled.");
+                        ContextSet(new List<GeometryBase>());
+                        RhinoApp.WriteLine("No context selected.");
                     }
                     else
                     {
@@ -982,7 +983,8 @@ namespace DPredict.ViewModels
                     }
                     else if (result == GetResult.Nothing)
                     {
-                        RhinoApp.WriteLine("Selection was canceled.");
+                        InteriorWallsSet(new List<GeometryBase>());
+                        RhinoApp.WriteLine("No interior walls were selected.");
                     }
                     else
                     {
