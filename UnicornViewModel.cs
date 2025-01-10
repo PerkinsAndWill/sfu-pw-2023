@@ -269,6 +269,17 @@ namespace DPredict.ViewModels
                             return;
                         }
 
+                        // Store current view
+                        RhinoView oldView = null;
+                        int index = -1;
+                        bool oldViewMaximized = false;
+                        if (doc.Views.ActiveView != null)
+                        {
+                            oldView = doc.Views.ActiveView;
+                            index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldView.ActiveViewportID);
+                            oldViewMaximized = oldView.Maximized;
+                        }
+
                         // Create and set up a new view
                         RhinoView view = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(0, 0, 800, 600), true);
                         if (view == null)
@@ -348,6 +359,14 @@ namespace DPredict.ViewModels
 
                         // Close the custom view after capture
                         view.Close();
+
+                        // restore previous view
+                        if (oldView != null)
+                        {
+                            doc.NamedViews.Restore(index, oldView.ActiveViewport);
+                            oldView.Maximized = oldViewMaximized;
+                            oldView.Redraw();
+                        }
                     });
                 }
                 catch (Exception ex)
@@ -414,8 +433,6 @@ namespace DPredict.ViewModels
 
                         // Capture the view to a bitmap
                         Bitmap bm = view.CaptureToBitmap(new Size(view.ActiveViewport.Size.Width, view.ActiveViewport.Size.Height), displaymode);
-
-                        // TODO: delete clipping plane from line 370
 
                         currentAlternative.imageBytes = ImageToBase64String(bm);
                         string number = currentAlternative.data["num"].ToString();  // keep the record
@@ -1385,12 +1402,12 @@ namespace DPredict.ViewModels
                             RhinoDoc doc = RhinoDoc.ActiveDoc;
 
                             List<Guid> guids = CollectResults(res, ref benchmark, false);
-                            guids.AddRange(contextGuids);
+                            // add context guids as duplicate geometry
+                            guids.AddRange(context.Select(geom => doc.Objects.Add(geom.Duplicate())).ToList());
 
                             SwitchDaylightMesh(0, benchmark).Wait();
 
                             List<Guid> visibleGuids = guids.Select(id => doc.Objects.Find(id)).Where(obj => obj != null).Where(obj => !obj.IsHidden).Select(obj => obj.Id).ToList();
-
                             double height = benchmark.data["floor_to_floor"] is double ? (double)benchmark.data["floor_to_floor"] : 3.2;
 
                             SaveObjectsAndImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
@@ -2366,7 +2383,10 @@ namespace DPredict.ViewModels
             contextGuids.ForEach(contextGuid =>
             {
                 RhinoObject obj = RhinoDoc.ActiveDoc.Objects.FindId(contextGuid);
-                obj.Highlight(highlight);
+                if (obj != null)
+                {
+                    obj.Highlight(highlight);
+                }
             });
         }
 
