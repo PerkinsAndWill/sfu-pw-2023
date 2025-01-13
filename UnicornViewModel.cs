@@ -610,6 +610,7 @@ namespace DPredict.ViewModels
         {
             RhinoDoc.ReplaceRhinoObject += OnObjectReplaced;
             RhinoDoc.ModifyObjectAttributes += OnModifyObjectAttributes;
+            RhinoDoc.DeleteRhinoObject += OnDeleteRhinoObject;
             RhinoDoc.SelectObjects += OnSelectObjects;
             RhinoDoc.DeselectAllObjects += DeselectAllObjects;
             RhinoDoc.DeselectObjects += OnSelectObjects;
@@ -1953,7 +1954,6 @@ namespace DPredict.ViewModels
             {
                 UnicornPlugin.UIInterop.UpdateUIOutputData(metrics);
                 UnicornPlugin.UIInterop.UpdateUIOutputDataTrees(metrics_trees);                
-                
             }
 
 
@@ -2012,6 +2012,39 @@ namespace DPredict.ViewModels
 
             uint sn = e.DocumentSerialNumber;
             // TOOD...
+        }
+
+        public void OnDeleteRhinoObject(object sender, RhinoObjectEventArgs e)
+        {
+            if (e.ObjectId == currentAlternative.zoneGuid)
+            {
+                currentAlternative = null;
+                SetZone(null);
+            }
+            else
+            {
+                int indexOfWall = currentAlternative.interiorWallsGuids.IndexOf(e.ObjectId);
+                if (indexOfWall >= 0)
+                {
+                    currentAlternative.interiorWalls.RemoveAt(indexOfWall);
+                    UpdateData(currentAlternative, "interior_walls", currentAlternative.interiorWalls);
+                    if (currentAlternative.interiorWalls.Count == 0)
+                    {
+                        UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
+                    }
+                }
+
+                int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
+                if (indexOfContextPart >= 0 && !contextReplacementFlag)
+                {
+                    context.RemoveAt(indexOfContextPart);
+                    UpdateData(currentAlternative, "context", context);
+                    if (context.Count == 0)
+                    {
+                        UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -2178,6 +2211,7 @@ namespace DPredict.ViewModels
 
         }
 
+        bool contextReplacementFlag = false;
         private void OnObjectReplaced(object sender, RhinoReplaceObjectEventArgs e)
         {
             if (currentAlternative == null) return;
@@ -2199,12 +2233,14 @@ namespace DPredict.ViewModels
                     int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
                     if (indexOfContextPart >= 0)
                     {
+                        contextReplacementFlag = true;
                         context[indexOfContextPart] = e.NewRhinoObject.Geometry;
                         UpdateData(currentAlternative, "context", context);
+                        return;
                     }
                 }
             }
-
+            contextReplacementFlag = false;
         }
         private bool ContainsGeom(List<Brep> geoms, GeometryBase target)
         {
