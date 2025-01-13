@@ -659,7 +659,6 @@ namespace DPredict.ViewModels
 
         private void CloseExcelAndDelete(object sender, EventArgs e)
         {
-            Process process = null;
             try
             {
                 // first get running excel app & workbook
@@ -676,7 +675,6 @@ namespace DPredict.ViewModels
 
                 if (workbook != null)
                 {
-                    process = ProcessUtility.GetExcelProcess(excelApp);
                     // then close/quit
                     workbook.Close(false);
                     excelApp.Quit();
@@ -703,11 +701,6 @@ namespace DPredict.ViewModels
             catch (IOException ex)
             {
                 Console.WriteLine($"{ex.Message}");
-            }
-
-            if (process != null)
-            {
-                process.Kill();
             }
 
         }
