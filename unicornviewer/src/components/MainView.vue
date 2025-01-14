@@ -251,9 +251,9 @@
                   />
                   <v-slider
                     v-model="inputs.floor_to_floor"
-                    :min="0"
+                    :min="2"
                     :max="10"
-                    :step="0.25"
+                    :step="0.1"
                     show-ticks="always"
                     tick-size="4"
                     label="Floor to Floor [m]"
@@ -278,8 +278,8 @@
                     </template>
                   </v-slider>
                   <v-slider
-                    v-model="inputs.floor_to_floor"
-                    :min="0"
+                    v-model="inputs.number_of_floors"
+                    :min="1"
                     :max="100"
                     :step="1"
                     show-ticks="always"
@@ -307,7 +307,7 @@
                   </v-slider>
                   <v-slider
                     v-model="inputs.footprint_offset"
-                    :min="0"
+                    :min="1"
                     :max="100"
                     :step="1"
                     show-ticks="always"
@@ -368,7 +368,7 @@
                     label="Ground R Value [IP]"
                     :min="0"
                     :max="40"
-                    :step="0.1"
+                    :step="1"
                   />
                   <ParamSlider
                     model-name="win_u_val"
@@ -2152,11 +2152,13 @@ export default {
         const samples = normalizedSamples.map((arr) =>
           arr.map((s, i) => {
             var input = {};
-            input[this.parametricAnalysisDataSelected[i].name] =
+            let val =
               this.parametricAnalysisDataSelected[i].range[0] +
               s *
                 (this.parametricAnalysisDataSelected[i].range[1] -
-                  this.parametricAnalysisDataSelected[i].range[0]);
+                      this.parametricAnalysisDataSelected[i].range[0]);
+              input[this.parametricAnalysisDataSelected[i].name] = this.parametricAnalysisDataSelected[i].isInt ?
+                  Math.trunc(val + 0.5) : val;
             return input;
           })
         );
