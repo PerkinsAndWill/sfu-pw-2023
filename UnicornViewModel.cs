@@ -501,7 +501,7 @@ namespace DPredict.ViewModels
                 // TODO: check if zone/objects exist in doc and reference instead of create them
                 currentAlternative.currentObjectsGuids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
                 currentAlternative.currentObjectsGuids.Clear();
-                RhinoDoc.ActiveDoc.Objects.Delete(currentAlternative.zoneGuid, true);
+                //RhinoDoc.ActiveDoc.Objects.Delete(currentAlternative.zoneGuid, true); // this currently sets currentAlternative = null
 
                 string num = currentAlternative.data["num"].ToString();
                 currentAlternative = alternative;
@@ -1680,7 +1680,7 @@ namespace DPredict.ViewModels
 
             try
             {
-                lastRequestDate = DateTime.Now;  // TODO: this looks like it's at the wrong place
+                lastRequestDate = DateTime.Now; 
                 DateTime thisRequestDate = DateTime.Now;
 
                 result = Rhino.Compute.GrasshopperCompute.EvaluateDefinition(definitionPath, trees);
@@ -1965,8 +1965,8 @@ namespace DPredict.ViewModels
             alt.metrics["UDIa"] = new List<double>() { Math.Round(daMetrics[2]) };
             alt.metrics["MI"] = new List<double>() { Math.Round(daMetrics[3]) };
 
-            alt.metrics["Cooling"] = new List<double>() { Math.Round(loadsMetrics[0], 2) };
-            alt.metrics["Heating"] = new List<double>() { Math.Round(loadsMetrics[1], 2) };
+            alt.metrics["Cooling"] = new List<double>() { Math.Round(loadsMetrics[1], 2) };
+            alt.metrics["Heating"] = new List<double>() { Math.Round(loadsMetrics[0], 2) };
 
             alt.daylightMeshesIds = new List<Guid>();
 
