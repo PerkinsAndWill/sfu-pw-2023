@@ -563,6 +563,13 @@ namespace DPredict.ViewModels
                 await UpdateData(currentAlternative, "interior_walls", alternative.interiorWalls, true);
                 await UpdateData(currentAlternative, "zone", geometry);
                 UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", true);
+                if (alternative.interiorWalls != null && alternative.interiorWalls.Count > 0) {
+                    UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", true);
+                }
+                else
+                {
+                    UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
+                }
             }
             else
             {
