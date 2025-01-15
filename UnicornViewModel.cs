@@ -149,6 +149,29 @@ namespace DPredict.ViewModels
         internal string weatherLocation;
         internal int currentDaylightMeshIndex = 0;
 
+        public static void Clear(Alternative alt, RhinoDoc doc)
+        {
+            // clear zone
+            alt.zone = null;
+
+            // clear exterior walls
+            alt.walls = new List<Brep>();
+            alt.wallsGuid.ForEach(guid => doc.Objects.Delete(guid, true));
+            alt.wallsGuid = new List<Guid>();
+
+            // clear interior walls
+            alt.interiorWalls = new List<Curve>();
+            //alt.interiorWallsGuids.ForEach(guid => doc.Objects.Delete(guid, true));  // keep curve geometries in rhino
+            alt.interiorWallsGuids = new List<Guid>();
+
+            // clear other geometries
+            alt.currentObjectsGuids.ForEach(guid => doc.Objects.Delete(guid, true));
+            alt.currentObjectsGuids = new List<Guid>();
+
+            // clear heatmaps
+            alt.daylightMeshesIds.ForEach(guid => doc.Objects.Delete(guid, true));
+            alt.daylightMeshesIds = new List<Guid>();
+        }
         public static string RandomHexString(int len)
         {
             Random rdm = new Random();
@@ -2016,32 +2039,40 @@ namespace DPredict.ViewModels
 
         public void OnDeleteRhinoObject(object sender, RhinoObjectEventArgs e)
         {
-            if (e.ObjectId == currentAlternative.zoneGuid)
+            if (replacedObjectGuids.Contains(e.ObjectId))
             {
-                currentAlternative = null;
-                SetZone(null);
+                replacedObjectGuids.Remove(e.ObjectId);
             }
             else
             {
-                int indexOfWall = currentAlternative.interiorWallsGuids.IndexOf(e.ObjectId);
-                if (indexOfWall >= 0)
+                if (e.ObjectId == currentAlternative.zoneGuid)
                 {
-                    currentAlternative.interiorWalls.RemoveAt(indexOfWall);
-                    UpdateData(currentAlternative, "interior_walls", currentAlternative.interiorWalls);
-                    if (currentAlternative.interiorWalls.Count == 0)
-                    {
-                        UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
-                    }
+                    Alternative.Clear(currentAlternative, RhinoDoc.ActiveDoc);
+                    UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", false);
+                    UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
                 }
-
-                int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
-                if (indexOfContextPart >= 0 && !contextReplacementFlag)
+                else
                 {
-                    context.RemoveAt(indexOfContextPart);
-                    UpdateData(currentAlternative, "context", context);
-                    if (context.Count == 0)
+                    int indexOfWall = currentAlternative.interiorWallsGuids.IndexOf(e.ObjectId);
+                    if (indexOfWall >= 0)
                     {
-                        UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
+                        currentAlternative.interiorWalls.RemoveAt(indexOfWall);
+                        UpdateData(currentAlternative, "interior_walls", currentAlternative.interiorWalls);
+                        if (currentAlternative.interiorWalls.Count == 0)
+                        {
+                            UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
+                        }
+                    }
+
+                    int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
+                    if (indexOfContextPart >= 0)
+                    {
+                        context.RemoveAt(indexOfContextPart);
+                        UpdateData(currentAlternative, "context", context);
+                        if (context.Count == 0)
+                        {
+                            UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
+                        }
                     }
                 }
             }
@@ -2211,13 +2242,14 @@ namespace DPredict.ViewModels
 
         }
 
-        bool contextReplacementFlag = false;
+        List<Guid> replacedObjectGuids = new List<Guid>();
         private void OnObjectReplaced(object sender, RhinoReplaceObjectEventArgs e)
         {
             if (currentAlternative == null) return;
 
             if (e.ObjectId == currentAlternative.zoneGuid)
             {
+                replacedObjectGuids.Add(e.ObjectId);
                 SetZone((Curve)e.NewRhinoObject.Geometry, false);
             }
             else
@@ -2225,6 +2257,7 @@ namespace DPredict.ViewModels
                 int indexOfWall = currentAlternative.interiorWallsGuids.IndexOf(e.ObjectId);
                 if (indexOfWall >= 0)
                 {
+                    replacedObjectGuids.Add(e.ObjectId);
                     currentAlternative.interiorWalls[indexOfWall] = (Curve)e.NewRhinoObject.Geometry;
                     UpdateData(currentAlternative, "interior_walls", currentAlternative.interiorWalls);
                 }
@@ -2233,14 +2266,12 @@ namespace DPredict.ViewModels
                     int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
                     if (indexOfContextPart >= 0)
                     {
-                        contextReplacementFlag = true;
+                        replacedObjectGuids.Add(e.ObjectId);
                         context[indexOfContextPart] = e.NewRhinoObject.Geometry;
                         UpdateData(currentAlternative, "context", context);
-                        return;
                     }
                 }
             }
-            contextReplacementFlag = false;
         }
         private bool ContainsGeom(List<Brep> geoms, GeometryBase target)
         {
