@@ -1,501 +1,419 @@
 <template>
   <div>
-    <v-container
-      fluid
-      title="Modeling"
-      class="pa-1"
-    >
-      <v-tabs
-        v-model="modelling_tab"
-        color="deep-purple-accent-4"
-        align-tabs="center"
-        class="fixed-tabs-bar"
-      >
-        <v-tab>Setup</v-tab>
-        <v-tab>Explore</v-tab>
-        <v-tab>Compare</v-tab>
-        <v-tab>Analyze</v-tab>
-        <v-tab>Visualize</v-tab>
-      </v-tabs>
+      <v-container fluid
+                   title="Modeling"
+                   class="pa-1">
+          <div class="fixed-tabs-bar">
 
-      <div class="loading-element">
-        <VueElementLoading
-          :active="showSpinnerSingleRun"
-          spinner="spinner"
-        />
-      </div>
 
-      <v-tabs-items v-model="modelling_tab">
-        <v-tab-item>
-          <v-container
-            style="
+              <v-tabs v-model="modelling_tab"
+                      color="deep-purple-accent-4"
+                      align-tabs="center"
+                      class="fixed-tabs-bar">
+                  <v-tab>Setup</v-tab>
+                  <v-tab>Explore</v-tab>
+                  <v-tab>Compare</v-tab>
+                  <v-tab>Analyze</v-tab>
+                  <v-tab>Visualize</v-tab>
+              </v-tabs>
+
+
+              <div class="loading-element">
+                  <VueElementLoading :active="showSpinnerSingleRun"
+                                     spinner="spinner" />
+              </div>
+          </div>
+
+
+
+          <v-tabs-items v-model="modelling_tab">
+              <v-tab-item>
+                  <v-container style="
               display: flex;
               flex-wrap: nowrap;
               justify-content: space-evenly;
               align-items: center;
-            "
-          >
-            <div style="display: flex; align-items: center">
-              <v-tooltip
-                bottom
-                open-delay="200"
-              >
-                <template #activator="{ on, attrs }">
-                  <v-btn
-                    class="text-none"
-                    v-bind="attrs"
-                    style="width: 120px"
-                    :style="[
+            ">
+                      <div style="display: flex; align-items: center">
+                          <v-tooltip bottom
+                                     open-delay="200">
+                              <template #activator="{ on, attrs }">
+                                  <v-btn class="text-none"
+                                         v-bind="attrs"
+                                         style="width: 120px"
+                                         :style="[
                       isZoneSet
                         ? { 'background-color': 'white' }
                         : { 'background-color': 'lightgray' },
                     ]"
-                    v-on="on"
-                    @click="setZone"
-                  >
-                    <svg
-                      v-show="isZoneSet"
-                      width="25px"
-                      style="fill: green; margin-right: 10px"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                    >
-                      <title>check-outline</title>
-                      <path
-                        d="M19.78,2.2L24,6.42L8.44,22L0,13.55L4.22,9.33L8.44,13.55L19.78,2.2M19.78,5L8.44,16.36L4.22,12.19L2.81,13.55L8.44,19.17L21.19,6.42L19.78,5Z"
-                      />
-                    </svg>
-                    Footprint
-                  </v-btn>
-                </template>
-                <span>
-                  The outline of the footprint. Exterior walls will be created
-                  based on this.
-                </span>
-              </v-tooltip>
-              <v-switch
-                v-show="isZoneSet"
-                v-model="isClipping"
-                style="padding-left: 10px"
-                label="Clip"
-                @change="clipByFootprintInRhino"
-              />
-            </div>
-            <v-tooltip bottom>
-              <template #activator="{ on, attrs }">
-                <v-btn
-                  v-bind="attrs"
-                  :style="[
+                                         v-on="on"
+                                         @click="setZone">
+                                      <svg v-show="isZoneSet"
+                                           width="25px"
+                                           style="fill: green; margin-right: 10px"
+                                           xmlns="http://www.w3.org/2000/svg"
+                                           viewBox="0 0 24 24">
+                                          <title>check-outline</title>
+                                          <path d="M19.78,2.2L24,6.42L8.44,22L0,13.55L4.22,9.33L8.44,13.55L19.78,2.2M19.78,5L8.44,16.36L4.22,12.19L2.81,13.55L8.44,19.17L21.19,6.42L19.78,5Z" />
+                                      </svg>
+                                      Footprint
+                                  </v-btn>
+                              </template>
+                              <span>
+                                  The outline of the footprint. Exterior walls will be created
+                                  based on this.
+                              </span>
+                          </v-tooltip>
+                          <v-switch v-show="isZoneSet"
+                                    v-model="isClipping"
+                                    style="padding-left: 10px"
+                                    label="Clip"
+                                    @change="clipByFootprintInRhino" />
+                      </div>
+                      <v-tooltip bottom>
+                          <template #activator="{ on, attrs }">
+                              <v-btn v-bind="attrs"
+                                     :style="[
                     isContextSet
                       ? { 'background-color': 'white' }
                       : { 'background-color': 'lightgray' },
                   ]"
-                  class="text-none"
-                  v-on="on"
-                  @click="setContext"
-                  @mouseenter="onHoverElements('Context', true)"
-                  @mouseleave="onHoverElements('Context', false)"
-                >
-                  <svg
-                    v-show="isContextSet"
-                    width="25px"
-                    style="fill: green; margin-right: 10px"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                  >
-                    <title>check-outline</title>
-                    <path
-                      d="M19.78,2.2L24,6.42L8.44,22L0,13.55L4.22,9.33L8.44,13.55L19.78,2.2M19.78,5L8.44,16.36L4.22,12.19L2.81,13.55L8.44,19.17L21.19,6.42L19.78,5Z"
-                    />
-                  </svg>
+                                     class="text-none"
+                                     v-on="on"
+                                     @click="setContext"
+                                     @mouseenter="onHoverElements('Context', true)"
+                                     @mouseleave="onHoverElements('Context', false)">
+                                  <svg v-show="isContextSet"
+                                       width="25px"
+                                       style="fill: green; margin-right: 10px"
+                                       xmlns="http://www.w3.org/2000/svg"
+                                       viewBox="0 0 24 24">
+                                      <title>check-outline</title>
+                                      <path d="M19.78,2.2L24,6.42L8.44,22L0,13.55L4.22,9.33L8.44,13.55L19.78,2.2M19.78,5L8.44,16.36L4.22,12.19L2.81,13.55L8.44,19.17L21.19,6.42L19.78,5Z" />
+                                  </svg>
 
-                  Context
-                </v-btn>
-              </template>
-              <span>
-                The buildings in the surrounding context. These will be included
-                in the performance calculations.
-              </span>
-            </v-tooltip>
-            <v-tooltip bottom>
-              <template #activator="{ on, attrs }">
-                <v-btn
-                  class="text-none"
-                  v-bind="attrs"
-                  :style="[
+                                  Context
+                              </v-btn>
+                          </template>
+                          <span>
+                              The buildings in the surrounding context. These will be included
+                              in the performance calculations.
+                          </span>
+                      </v-tooltip>
+                      <v-tooltip bottom>
+                          <template #activator="{ on, attrs }">
+                              <v-btn class="text-none"
+                                     v-bind="attrs"
+                                     :style="[
                     isInteriorWallsSet
                       ? { 'background-color': 'white' }
                       : { 'background-color': 'lightgray' },
                   ]"
-                  v-on="on"
-                  @click="setInteriorWalls"
-                >
-                  <svg
-                    v-show="isInteriorWallsSet"
-                    width="25px"
-                    style="fill: green; margin-right: 10px"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                  >
-                    <title>check-outline</title>
-                    <path
-                      d="M19.78,2.2L24,6.42L8.44,22L0,13.55L4.22,9.33L8.44,13.55L19.78,2.2M19.78,5L8.44,16.36L4.22,12.19L2.81,13.55L8.44,19.17L21.19,6.42L19.78,5Z"
-                    />
-                  </svg>
+                                     v-on="on"
+                                     @click="setInteriorWalls">
+                                  <svg v-show="isInteriorWallsSet"
+                                       width="25px"
+                                       style="fill: green; margin-right: 10px"
+                                       xmlns="http://www.w3.org/2000/svg"
+                                       viewBox="0 0 24 24">
+                                      <title>check-outline</title>
+                                      <path d="M19.78,2.2L24,6.42L8.44,22L0,13.55L4.22,9.33L8.44,13.55L19.78,2.2M19.78,5L8.44,16.36L4.22,12.19L2.81,13.55L8.44,19.17L21.19,6.42L19.78,5Z" />
+                                  </svg>
 
-                  Interior Walls
-                </v-btn>
-              </template>
-              <span> The interior walls.</span>
-            </v-tooltip>
-          </v-container>
+                                  Interior Walls
+                              </v-btn>
+                          </template>
+                          <span> The interior walls.</span>
+                      </v-tooltip>
+                  </v-container>
 
-          <v-expansion-panels
-            v-model="setup_tab_expansion"
-            multiple
-          >
-            <!--Weather File Panel -->
-            <v-expansion-panel>
-              <v-expansion-panel-header>
-                Weather File & Precision
-              </v-expansion-panel-header>
-              <v-expansion-panel-content>
-                <v-container>
-                  <v-row>
-                    <v-btn
-                      :style="[
+                  <v-expansion-panels v-model="setup_tab_expansion"
+                                      multiple>
+                      <!--Weather File Panel -->
+                      <v-expansion-panel>
+                          <v-expansion-panel-header>
+                              Weather File & Precision
+                          </v-expansion-panel-header>
+                          <v-expansion-panel-content>
+                              <v-container>
+                                  <v-row>
+                                      <v-btn :style="[
                         isWeatherFileSet
                           ? { 'background-color': 'white' }
                           : { 'background-color': 'lightgray' },
                       ]"
-                      class="text-none"
-                      @click="setWeatherFile"
-                    >
-                      <svg
-                        v-show="isWeatherFileSet"
-                        width="25px"
-                        style="fill: green; margin-right: 10px"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                      >
-                        <title>check-outline</title>
-                        <path
-                          d="M19.78,2.2L24,6.42L8.44,22L0,13.55L4.22,9.33L8.44,13.55L19.78,2.2M19.78,5L8.44,16.36L4.22,12.19L2.81,13.55L8.44,19.17L21.19,6.42L19.78,5Z"
-                        />
-                      </svg>
-                      Pick Weather File
-                    </v-btn>
-                    <span
-                      v-if="isWeatherFileSet"
-                      style="font-size: medium; margin-left: 5px;"
-                    >
-                      <em> {{ weatherFileLocation }} </em>
-                    </span>
-                  </v-row>
-                  <v-row class="mt-10">
-                    <v-select
-                      v-model="gridSizeSelected"
-                      label="Daylighting Grid Size"
-                      density="compact"
-                      :items="gridSizeData"
-                      item-text="name"
-                      return-object
-                      outlined
-                      @change="
+                                             class="text-none"
+                                             @click="setWeatherFile">
+                                          <svg v-show="isWeatherFileSet"
+                                               width="25px"
+                                               style="fill: green; margin-right: 10px"
+                                               xmlns="http://www.w3.org/2000/svg"
+                                               viewBox="0 0 24 24">
+                                              <title>check-outline</title>
+                                              <path d="M19.78,2.2L24,6.42L8.44,22L0,13.55L4.22,9.33L8.44,13.55L19.78,2.2M19.78,5L8.44,16.36L4.22,12.19L2.81,13.55L8.44,19.17L21.19,6.42L19.78,5Z" />
+                                          </svg>
+                                          Pick Weather File
+                                      </v-btn>
+                                      <span v-if="isWeatherFileSet"
+                                            style="font-size: medium; margin-left: 5px;">
+                                          <em> {{ weatherFileLocation }} </em>
+                                      </span>
+                                  </v-row>
+                                  <v-row class="mt-10">
+                                      <v-select v-model="gridSizeSelected"
+                                                label="Daylighting Grid Size"
+                                                density="compact"
+                                                :items="gridSizeData"
+                                                item-text="name"
+                                                return-object
+                                                outlined
+                                                @change="
                         updateBackendData(
                           'grid_size',
                           gridSizeSelected.index,
                           false
                         )
-                      "
-                    />
-                  </v-row>
-                </v-container>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
+                      " />
+                                  </v-row>
+                              </v-container>
+                          </v-expansion-panel-content>
+                      </v-expansion-panel>
 
-            <!--Energy Analysis Setup Panel -->
-            <v-expansion-panel>
-              <v-expansion-panel-header>
-                Building Inputs
-              </v-expansion-panel-header>
-              <v-expansion-panel-content>
-                <v-container>
-                  <v-select
-                    v-model="buildingTypeSelected"
-                    label="Building Type"
-                    density="compact"
-                    :items="buildingTypeData"
-                    item-text="name"
-                    return-object
-                    outlined
-                    @change="
+                      <!--Energy Analysis Setup Panel -->
+                      <v-expansion-panel>
+                          <v-expansion-panel-header>
+                              Building Inputs
+                          </v-expansion-panel-header>
+                          <v-expansion-panel-content>
+                              <v-container>
+                                  <v-select v-model="buildingTypeSelected"
+                                            label="Building Type"
+                                            density="compact"
+                                            :items="buildingTypeData"
+                                            item-text="name"
+                                            return-object
+                                            outlined
+                                            @change="
                       updateBackendData(
                         'building_type',
                         buildingTypeSelected.index,
                         true
                       )
-                    "
-                  />
-                  <v-select
-                    v-model="terrainSelected"
-                    label="Terrain"
-                    density="compact"
-                    :items="terrainData"
-                    item-text="name"
-                    return-object
-                    outlined
-                    @change="
+                    " />
+                                  <v-select v-model="terrainSelected"
+                                            label="Terrain"
+                                            density="compact"
+                                            :items="terrainData"
+                                            item-text="name"
+                                            return-object
+                                            outlined
+                                            @change="
                       updateBackendData('terrain', terrainSelected.index, true)
-                    "
-                  />
-                  <v-slider
-                    v-model="inputs.floor_to_floor"
-                    :min="2"
-                    :max="10"
-                    :step="0.1"
-                    show-ticks="always"
-                    tick-size="4"
-                    label="Floor to Floor [m]"
-                    hide-details
-                    @end="
+                    " />
+                                  <v-slider v-model="inputs.floor_to_floor"
+                                            :min="2"
+                                            :max="10"
+                                            :step="0.1"
+                                            show-ticks="always"
+                                            tick-size="4"
+                                            label="Floor to Floor [m]"
+                                            hide-details
+                                            @end="
                       updateBackendData(
                         'floor_to_floor',
                         inputs.floor_to_floor,
                         false
                       )
-                    "
-                  >
-                    <template #append>
-                      <v-text-field
-                        v-model="inputs.floor_to_floor"
-                        type="number"
-                        style="width: 80px"
-                        density="compact"
-                        hide-details
-                        variant="outlined"
-                      />
-                    </template>
-                  </v-slider>
-                  <v-slider
-                    v-model="inputs.number_of_floors"
-                    :min="1"
-                    :max="100"
-                    :step="1"
-                    show-ticks="always"
-                    tick-size="4"
-                    label="Number of Floors"
-                    hide-details
-                    @end="
+                    ">
+                                      <template #append>
+                                          <v-text-field v-model="inputs.floor_to_floor"
+                                                        type="number"
+                                                        style="width: 80px"
+                                                        density="compact"
+                                                        hide-details
+                                                        variant="outlined" />
+                                      </template>
+                                  </v-slider>
+                                  <v-slider v-model="inputs.number_of_floors"
+                                            :min="1"
+                                            :max="100"
+                                            :step="1"
+                                            show-ticks="always"
+                                            tick-size="4"
+                                            label="Number of Floors"
+                                            hide-details
+                                            @end="
                       updateBackendData(
                         'number_of_floors',
                         inputs.number_of_floors,
                         false
                       )
-                    "
-                  >
-                    <template #append>
-                      <v-text-field
-                        v-model="inputs.number_of_floors"
-                        type="number"
-                        style="width: 80px"
-                        density="compact"
-                        hide-details
-                        variant="outlined"
-                      />
-                    </template>
-                  </v-slider>
-                  <v-slider
-                    v-model="inputs.footprint_offset"
-                    :min="1"
-                    :max="100"
-                    :step="1"
-                    show-ticks="always"
-                    tick-size="8"
-                    label="Footprint V. Offset from Ground [m]"
-                    hide-details
-                    @end="
+                    ">
+                                      <template #append>
+                                          <v-text-field v-model="inputs.number_of_floors"
+                                                        type="number"
+                                                        style="width: 80px"
+                                                        density="compact"
+                                                        hide-details
+                                                        variant="outlined" />
+                                      </template>
+                                  </v-slider>
+                                  <v-slider v-model="inputs.footprint_offset"
+                                            :min="1"
+                                            :max="100"
+                                            :step="1"
+                                            show-ticks="always"
+                                            tick-size="8"
+                                            label="Footprint V. Offset from Ground [m]"
+                                            hide-details
+                                            @end="
                       updateBackendData(
                         'footprint_offset',
                         inputs.footprint_offset,
                         false
                       )
-                    "
-                  >
-                    <template #append>
-                      <v-text-field
-                        v-model="inputs.footprint_offset"
-                        type="number"
-                        style="width: 80px"
-                        density="compact"
-                        hide-details
-                        variant="outlined"
-                      />
-                    </template>
-                  </v-slider>
-                </v-container>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
+                    ">
+                                      <template #append>
+                                          <v-text-field v-model="inputs.footprint_offset"
+                                                        type="number"
+                                                        style="width: 80px"
+                                                        density="compact"
+                                                        hide-details
+                                                        variant="outlined" />
+                                      </template>
+                                  </v-slider>
+                              </v-container>
+                          </v-expansion-panel-content>
+                      </v-expansion-panel>
 
-            <!-- Material properties (Energy) Panel-->
-            <v-expansion-panel>
-              <v-expansion-panel-header>
-                Material Properties (Energy)
-              </v-expansion-panel-header>
-              <v-expansion-panel-content>
-                <v-container>
-                  <ParamSlider
-                    model-name="wall_r_val"
-                    :model-value="inputs.wall_r_val"
-                    label="Wall R Value [IP]"
-                    :min="0"
-                    :max="40"
-                    :step="1"
-                    tooltip="The R-Value of the exterior walls"
-                  />
-                  <ParamSlider
-                    model-name="roof_r_val"
-                    :model-value="inputs.roof_r_val"
-                    label="Roof R Value [IP]"
-                    :min="0"
-                    :max="40"
-                    :step="1"
-                    tooltip="The R-Value of the Roof"
-                  />
-                  <ParamSlider
-                    model-name="ground_r_val"
-                    :model-value="inputs.ground_r_val"
-                    label="Ground R Value [IP]"
-                    :min="0"
-                    :max="40"
-                    :step="1"
-                  />
-                  <ParamSlider
-                    model-name="win_u_val"
-                    :model-value="inputs.win_u_val"
-                    label="Win U-Value [SI]"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                    tooltip="The U-Value of the glazing system"
-                  />
-                  <ParamSlider
-                    model-name="win_shgc"
-                    :model-value="inputs.win_shgc"
-                    label="Win SHGC"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                    tooltip="The Solar Heat Gain Coefficient of the glazing system"
-                  />
-                </v-container>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
+                      <!-- Material properties (Energy) Panel-->
+                      <v-expansion-panel>
+                          <v-expansion-panel-header>
+                              Material Properties (Energy)
+                          </v-expansion-panel-header>
+                          <v-expansion-panel-content>
+                              <v-container>
+                                  <ParamSlider model-name="wall_r_val"
+                                               :model-value="inputs.wall_r_val"
+                                               label="Wall R Value [IP]"
+                                               :min="0"
+                                               :max="40"
+                                               :step="1"
+                                               tooltip="The R-Value of the exterior walls" />
+                                  <ParamSlider model-name="roof_r_val"
+                                               :model-value="inputs.roof_r_val"
+                                               label="Roof R Value [IP]"
+                                               :min="0"
+                                               :max="40"
+                                               :step="1"
+                                               tooltip="The R-Value of the Roof" />
+                                  <ParamSlider model-name="ground_r_val"
+                                               :model-value="inputs.ground_r_val"
+                                               label="Ground R Value [IP]"
+                                               :min="0"
+                                               :max="40"
+                                               :step="1" />
+                                  <ParamSlider model-name="win_u_val"
+                                               :model-value="inputs.win_u_val"
+                                               label="Win U-Value [SI]"
+                                               :min="0"
+                                               :max="1"
+                                               :step="0.1"
+                                               tooltip="The U-Value of the glazing system" />
+                                  <ParamSlider model-name="win_shgc"
+                                               :model-value="inputs.win_shgc"
+                                               label="Win SHGC"
+                                               :min="0"
+                                               :max="1"
+                                               :step="0.1"
+                                               tooltip="The Solar Heat Gain Coefficient of the glazing system" />
+                              </v-container>
+                          </v-expansion-panel-content>
+                      </v-expansion-panel>
 
-            <!-- Material properties (Daylighting) Panel -->
-            <v-expansion-panel>
-              <v-expansion-panel-header>
-                Material Properties (Daylighting)
-              </v-expansion-panel-header>
-              <v-expansion-panel-content>
-                <v-container>
-                  <ParamSlider
-                    model-name="ceiling_reflectance"
-                    :model-value="inputs.ceiling_reflectance"
-                    label="Ceiling Reflectance [%]"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                  />
-                  <ParamSlider
-                    model-name="floor_reflectance"
-                    :model-value="inputs.floor_reflectance"
-                    label="Floor Reflectance [%]"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                  />
-                  <ParamSlider
-                    model-name="wall_reflectance"
-                    :model-value="inputs.wall_reflectance"
-                    label="Wall Reflectance [%]"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                  />
-                  <ParamSlider
-                    model-name="glazing_transparency"
-                    :model-value="inputs.glazing_transparency"
-                    label="Glazing VLT [%]"
-                    :min="0"
-                    :max="1"
-                    :step="0.1"
-                    tooltip="Glazing transparency"
-                  />
-                </v-container>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
-          </v-expansion-panels>
-        </v-tab-item>
-        <v-tab-item>
-          <v-container class="panels_container">
-            <!-- Walls Table-->
-            <v-container>
-              <v-container class="wwr_inputs_container">
-                Select By Direction:
-                <v-btn
-                  small
-                  class="analyze_button"
-                  @click="selectWindowsInDirection(0)"
-                >
-                  S
-                </v-btn>
-                <v-btn
-                  small
-                  class="analyze_button"
-                  @click="selectWindowsInDirection(1)"
-                >
-                  E
-                </v-btn>
-                <v-btn
-                  small
-                  class="analyze_button"
-                  @click="selectWindowsInDirection(3)"
-                >
-                  W
-                </v-btn>
-                <v-btn
-                  small
-                  class="analyze_button"
-                  @click="selectWindowsInDirection(2)"
-                >
-                  N
-                </v-btn>
-                <v-row
-                  style="align-items: center; border-bottom: 1px gray solid"
-                >
-                  <v-col>
-                    <v-checkbox
-                      v-model="selectAllCheckbox"
-                      density="compact"
-                      hide-details
-                      class="walls_checkboxes shrink mr-1 mt-1"
-                      @change="onSelectAllCheckboxChange()"
-                    />
-                  </v-col>
-                  <v-col> # Wall </v-col>
+                      <!-- Material properties (Daylighting) Panel -->
+                      <v-expansion-panel>
+                          <v-expansion-panel-header>
+                              Material Properties (Daylighting)
+                          </v-expansion-panel-header>
+                          <v-expansion-panel-content>
+                              <v-container>
+                                  <ParamSlider model-name="ceiling_reflectance"
+                                               :model-value="inputs.ceiling_reflectance"
+                                               label="Ceiling Reflectance [%]"
+                                               :min="0"
+                                               :max="1"
+                                               :step="0.1" />
+                                  <ParamSlider model-name="floor_reflectance"
+                                               :model-value="inputs.floor_reflectance"
+                                               label="Floor Reflectance [%]"
+                                               :min="0"
+                                               :max="1"
+                                               :step="0.1" />
+                                  <ParamSlider model-name="wall_reflectance"
+                                               :model-value="inputs.wall_reflectance"
+                                               label="Wall Reflectance [%]"
+                                               :min="0"
+                                               :max="1"
+                                               :step="0.1" />
+                                  <ParamSlider model-name="glazing_transparency"
+                                               :model-value="inputs.glazing_transparency"
+                                               label="Glazing VLT [%]"
+                                               :min="0"
+                                               :max="1"
+                                               :step="0.1"
+                                               tooltip="Glazing transparency" />
+                              </v-container>
+                          </v-expansion-panel-content>
+                      </v-expansion-panel>
+                  </v-expansion-panels>
+              </v-tab-item>
+              <v-tab-item>
+                  <v-container class="panels_container">
+                      <!-- Walls Table-->
+                      <v-container>
+                          <v-container class="wwr_inputs_container">
+                              Select By Direction:
+                              <v-btn small
+                                     class="analyze_button"
+                                     @click="selectWindowsInDirection(0)">
+                                  S
+                              </v-btn>
+                              <v-btn small
+                                     class="analyze_button"
+                                     @click="selectWindowsInDirection(1)">
+                                  E
+                              </v-btn>
+                              <v-btn small
+                                     class="analyze_button"
+                                     @click="selectWindowsInDirection(3)">
+                                  W
+                              </v-btn>
+                              <v-btn small
+                                     class="analyze_button"
+                                     @click="selectWindowsInDirection(2)">
+                                  N
+                              </v-btn>
+                              <v-row style="align-items: center; border-bottom: 1px gray solid">
+                                  <v-col>
+                                      <v-checkbox v-model="selectAllCheckbox"
+                                                  density="compact"
+                                                  hide-details
+                                                  class="walls_checkboxes shrink mr-1 mt-1"
+                                                  @change="onSelectAllCheckboxChange()" />
+                                  </v-col>
+                                  <v-col> # Wall </v-col>
 
-                  <v-col> WWR </v-col>
-                  <v-col>Num. V.Shd.</v-col>
-                  <v-col>V.Shd. Depth[m]</v-col>
-                  <v-col>Num. H.Shd.</v-col>
-                  <v-col>H.Shd. Depth[m]</v-col>
-                  <v-col>Overhangs Depth[m]</v-col>
-                  <v-col>Overhangs Offset[m]</v-col>
-                </v-row>
-                <v-container
-                  :class="`${
-                    numWalls <= 4
+                                  <v-col> WWR </v-col>
+                                  <v-col>Num. V.Shd.</v-col>
+                                  <v-col>V.Shd. Depth[m]</v-col>
+                                  <v-col>Num. H.Shd.</v-col>
+                                  <v-col>H.Shd. Depth[m]</v-col>
+                                  <v-col>Overhangs Depth[m]</v-col>
+                                  <v-col>Overhangs Offset[m]</v-col>
+                              </v-row>
+                              <v-container :class="`${
+                                           numWalls <= 4
                       ? 'data_table_container'
                       : 'data_table_container large'
                   }`"
@@ -560,772 +478,622 @@
                     </v-col>
                   </v-row>
                 </v-container>
-              </v-container>
-            </v-container>
-            <!-- Controls -->
-            <v-container>
-              <div style="padding: 10px">
-                <v-btn
-                  class="text-none"
-                  @click="updateWWRShading"
-                >
-                  Apply to Selected Walls
-                </v-btn>
-                <v-slider
-                  v-model="WWRInput"
-                  :min="0"
-                  :max="1"
-                  :step="0.05"
-                  show-ticks="always"
-                  tick-size="4"
-                  label="WWR"
-                  hide-details
-                >
-                  <template #append>
-                    <v-text-field
-                      v-model="WWRInput"
-                      type="number"
-                      style="width: 40px"
-                      class="ma-0 pa-0"
-                      density="compact"
-                      hide-details
-                      variant="outlined"
-                    />
-                  </template>
-                </v-slider>
-                <!-- vShadingCountInput -->
-                <v-expansion-panels>
-                  <v-expansion-panel>
-                    <v-expansion-panel-header>
-                      <v-switch
-                        v-model="enable_shading"
-                        style="display: inline-block"
-                        color="primary"
-                        hide-details
-                        class="ma-0 ml-4"
-                        label="Shading Devices"
-                      />
-                    </v-expansion-panel-header>
-                    <v-expansion-panel-content>
-                      <v-radio-group
-                        v-model="shadingDeviceType"
-                        hide-details
-                        row
-                        mandatory
-                      >
-                        <template #label>
-                          <div style="font-size: medium">
-                            Shading Devices Type
+                          </v-container>
+                      </v-container>
+                      <!-- Controls -->
+                      <v-container>
+                          <div style="padding: 10px">
+                              <v-btn class="text-none"
+                                     @click="updateWWRShading">
+                                  Apply to Selected Walls
+                              </v-btn>
+                              <v-slider v-model="WWRInput"
+                                        :min="0"
+                                        :max="1"
+                                        :step="0.05"
+                                        show-ticks="always"
+                                        tick-size="4"
+                                        label="WWR"
+                                        hide-details>
+                                  <template #append>
+                                      <v-text-field v-model="WWRInput"
+                                                    type="number"
+                                                    style="width: 40px"
+                                                    class="ma-0 pa-0"
+                                                    density="compact"
+                                                    hide-details
+                                                    variant="outlined" />
+                                  </template>
+                              </v-slider>
+                              <!-- vShadingCountInput -->
+                              <v-expansion-panels>
+                                  <v-expansion-panel>
+                                      <v-expansion-panel-header>
+                                          <v-switch v-model="enable_shading"
+                                                    style="display: inline-block"
+                                                    color="primary"
+                                                    hide-details
+                                                    class="ma-0 ml-4"
+                                                    label="Shading Devices" />
+                                      </v-expansion-panel-header>
+                                      <v-expansion-panel-content>
+                                          <v-radio-group v-model="shadingDeviceType"
+                                                         hide-details
+                                                         row
+                                                         mandatory>
+                                              <template #label>
+                                                  <div style="font-size: medium">
+                                                      Shading Devices Type
+                                                  </div>
+                                              </template>
+                                              <v-radio label="Vertical"
+                                                       value="Vertical" />
+                                              <v-radio label="Horizontal"
+                                                       value="Horizontal" />
+                                          </v-radio-group>
+                                          <v-slider v-model="vShadingCountInput"
+                                                    :disabled="
+                          !enable_shading || shadingDeviceType != 'Vertical'
+                        "
+                                                    :min="0"
+                                                    :max="10"
+                                                    :step="1"
+                                                    show-ticks="always"
+                                                    tick-size="4"
+                                                    label="Vertical Shading Count"
+                                                    hide-details>
+                                              <template #append>
+                                                  <v-text-field v-model="vShadingCountInput"
+                                                                :disabled="
+                              !enable_shading || shadingDeviceType != 'Vertical'
+                            "
+                                                                type="number"
+                                                                style="width: 45px"
+                                                                class="ma-0 pa-0"
+                                                                density="compact"
+                                                                hide-details
+                                                                variant="outlined" />
+                                              </template>
+                                          </v-slider>
+                                          <v-slider v-model="vShadingDepthInput"
+                                                    :disabled="
+                          !enable_shading || shadingDeviceType != 'Vertical'
+                        "
+                                                    :min="0.1"
+                                                    :max="3"
+                                                    :step="0.05"
+                                                    show-ticks="always"
+                                                    tick-size="4"
+                                                    label="Vertical Shading [m]"
+                                                    hide-details>
+                                              <template #append>
+                                                  <v-text-field v-model="vShadingDepthInput"
+                                                                :disabled="
+                              !enable_shading || shadingDeviceType != 'Vertical'
+                            "
+                                                                type="number"
+                                                                style="width: 45px"
+                                                                class="ma-0 pa-0"
+                                                                density="compact"
+                                                                hide-details
+                                                                variant="outlined" />
+                                              </template>
+                                          </v-slider>
+                                          <v-slider v-model="hShadingCountInput"
+                                                    :disabled="
+                          !enable_shading || shadingDeviceType != 'Horizontal'
+                        "
+                                                    :min="0"
+                                                    :max="10"
+                                                    :step="1"
+                                                    show-ticks="always"
+                                                    tick-size="4"
+                                                    label="Horizontal Shading Count"
+                                                    hide-details>
+                                              <template #append>
+                                                  <v-text-field v-model="hShadingCountInput"
+                                                                :disabled="
+                              !enable_shading ||
+                                shadingDeviceType != 'Horizontal'
+                            "
+                                                                type="number"
+                                                                style="width: 45px"
+                                                                class="ma-0 pa-0"
+                                                                density="compact"
+                                                                hide-details
+                                                                variant="outlined" />
+                                              </template>
+                                          </v-slider>
+                                          <v-slider v-model="hShadingDepthInput"
+                                                    :disabled="
+                          !enable_shading || shadingDeviceType != 'Horizontal'
+                        "
+                                                    :min="0.1"
+                                                    :max="3"
+                                                    :step="0.05"
+                                                    show-ticks="always"
+                                                    tick-size="4"
+                                                    label="Horizontal Shading Depth [m]"
+                                                    hide-details>
+                                              <template #append>
+                                                  <v-text-field v-model="hShadingDepthInput"
+                                                                :disabled="
+                              !enable_shading ||
+                                shadingDeviceType != 'Horizontal'
+                            "
+                                                                type="number"
+                                                                style="width: 45px"
+                                                                class="ma-0 pa-0"
+                                                                density="compact"
+                                                                hide-details
+                                                                variant="outlined" />
+                                              </template>
+                                          </v-slider>
+                                      </v-expansion-panel-content>
+                                  </v-expansion-panel>
+                                  <v-expansion-panel>
+                                      <v-expansion-panel-header>
+                                          <v-switch v-model="enable_overhangs"
+                                                    style="display: inline-block"
+                                                    color="primary"
+                                                    hide-details
+                                                    class="ma-0 ml-4"
+                                                    label="Overhangs" />
+                                      </v-expansion-panel-header>
+                                      <v-expansion-panel-content>
+                                          <v-slider v-model="overhangsOffsetInput"
+                                                    :disabled="!enable_overhangs"
+                                                    :min="0"
+                                                    :max="2"
+                                                    :step="0.05"
+                                                    show-ticks="always"
+                                                    tick-size="4"
+                                                    label="Overhangs Offset [m]"
+                                                    hide-details>
+                                              <template #append>
+                                                  <v-text-field v-model="overhangsOffsetInput"
+                                                                :disabled="!enable_overhangs"
+                                                                type="number"
+                                                                style="width: 45px"
+                                                                class="ma-0 pa-0"
+                                                                density="compact"
+                                                                hide-details
+                                                                variant="outlined" />
+                                              </template>
+                                          </v-slider>
+                                          <v-slider v-model="overhangsDepthInput"
+                                                    :disabled="!enable_overhangs"
+                                                    :min="0"
+                                                    :max="2"
+                                                    :step="0.05"
+                                                    show-ticks="always"
+                                                    tick-size="4"
+                                                    label="Overhangs Depth [m]"
+                                                    hide-details>
+                                              <template #append>
+                                                  <v-text-field v-model="overhangsDepthInput"
+                                                                :disabled="!enable_overhangs"
+                                                                type="number"
+                                                                style="width: 45px"
+                                                                class="ma-0 pa-0"
+                                                                density="compact"
+                                                                hide-details
+                                                                variant="outlined" />
+                                              </template>
+                                          </v-slider>
+                                      </v-expansion-panel-content>
+                                  </v-expansion-panel>
+                              </v-expansion-panels>
                           </div>
-                        </template>
-                        <v-radio
-                          label="Vertical"
-                          value="Vertical"
-                        />
-                        <v-radio
-                          label="Horizontal"
-                          value="Horizontal"
-                        />
-                      </v-radio-group>
-                      <v-slider
-                        v-model="vShadingCountInput"
-                        :disabled="
-                          !enable_shading || shadingDeviceType != 'Vertical'
-                        "
-                        :min="0"
-                        :max="10"
-                        :step="1"
-                        show-ticks="always"
-                        tick-size="4"
-                        label="Vertical Shading Count"
-                        hide-details
-                      >
-                        <template #append>
-                          <v-text-field
-                            v-model="vShadingCountInput"
-                            :disabled="
-                              !enable_shading || shadingDeviceType != 'Vertical'
-                            "
-                            type="number"
-                            style="width: 45px"
-                            class="ma-0 pa-0"
-                            density="compact"
-                            hide-details
-                            variant="outlined"
-                          />
-                        </template>
-                      </v-slider>
-                      <v-slider
-                        v-model="vShadingDepthInput"
-                        :disabled="
-                          !enable_shading || shadingDeviceType != 'Vertical'
-                        "
-                        :min="0.1"
-                        :max="3"
-                        :step="0.05"
-                        show-ticks="always"
-                        tick-size="4"
-                        label="Vertical Shading [m]"
-                        hide-details
-                      >
-                        <template #append>
-                          <v-text-field
-                            v-model="vShadingDepthInput"
-                            :disabled="
-                              !enable_shading || shadingDeviceType != 'Vertical'
-                            "
-                            type="number"
-                            style="width: 45px"
-                            class="ma-0 pa-0"
-                            density="compact"
-                            hide-details
-                            variant="outlined"
-                          />
-                        </template>
-                      </v-slider>
-                      <v-slider
-                        v-model="hShadingCountInput"
-                        :disabled="
-                          !enable_shading || shadingDeviceType != 'Horizontal'
-                        "
-                        :min="0"
-                        :max="10"
-                        :step="1"
-                        show-ticks="always"
-                        tick-size="4"
-                        label="Horizontal Shading Count"
-                        hide-details
-                      >
-                        <template #append>
-                          <v-text-field
-                            v-model="hShadingCountInput"
-                            :disabled="
-                              !enable_shading ||
-                                shadingDeviceType != 'Horizontal'
-                            "
-                            type="number"
-                            style="width: 45px"
-                            class="ma-0 pa-0"
-                            density="compact"
-                            hide-details
-                            variant="outlined"
-                          />
-                        </template>
-                      </v-slider>
-                      <v-slider
-                        v-model="hShadingDepthInput"
-                        :disabled="
-                          !enable_shading || shadingDeviceType != 'Horizontal'
-                        "
-                        :min="0.1"
-                        :max="3"
-                        :step="0.05"
-                        show-ticks="always"
-                        tick-size="4"
-                        label="Horizontal Shading Depth [m]"
-                        hide-details
-                      >
-                        <template #append>
-                          <v-text-field
-                            v-model="hShadingDepthInput"
-                            :disabled="
-                              !enable_shading ||
-                                shadingDeviceType != 'Horizontal'
-                            "
-                            type="number"
-                            style="width: 45px"
-                            class="ma-0 pa-0"
-                            density="compact"
-                            hide-details
-                            variant="outlined"
-                          />
-                        </template>
-                      </v-slider>
-                    </v-expansion-panel-content>
-                  </v-expansion-panel>
-                  <v-expansion-panel>
-                    <v-expansion-panel-header>
-                      <v-switch
-                        v-model="enable_overhangs"
-                        style="display: inline-block"
-                        color="primary"
-                        hide-details
-                        class="ma-0 ml-4"
-                        label="Overhangs"
-                      />
-                    </v-expansion-panel-header>
-                    <v-expansion-panel-content>
-                      <v-slider
-                        v-model="overhangsOffsetInput"
-                        :disabled="!enable_overhangs"
-                        :min="0"
-                        :max="2"
-                        :step="0.05"
-                        show-ticks="always"
-                        tick-size="4"
-                        label="Overhangs Offset [m]"
-                        hide-details
-                      >
-                        <template #append>
-                          <v-text-field
-                            v-model="overhangsOffsetInput"
-                            :disabled="!enable_overhangs"
-                            type="number"
-                            style="width: 45px"
-                            class="ma-0 pa-0"
-                            density="compact"
-                            hide-details
-                            variant="outlined"
-                          />
-                        </template>
-                      </v-slider>
-                      <v-slider
-                        v-model="overhangsDepthInput"
-                        :disabled="!enable_overhangs"
-                        :min="0"
-                        :max="2"
-                        :step="0.05"
-                        show-ticks="always"
-                        tick-size="4"
-                        label="Overhangs Depth [m]"
-                        hide-details
-                      >
-                        <template #append>
-                          <v-text-field
-                            v-model="overhangsDepthInput"
-                            :disabled="!enable_overhangs"
-                            type="number"
-                            style="width: 45px"
-                            class="ma-0 pa-0"
-                            density="compact"
-                            hide-details
-                            variant="outlined"
-                          />
-                        </template>
-                      </v-slider>
-                    </v-expansion-panel-content>
-                  </v-expansion-panel>
-                </v-expansion-panels>
-              </div>
-            </v-container>
-            <!-- Daylighting Outputs-->
-            <v-container>
-              <h3 class="ma-0">
-                <v-switch
-                  v-model="inputs.enable_daylight"
-                  style="display: inline-block"
-                  color="primary"
-                  hide-details
-                  class="ma-0 ml-4"
-                  @change="
+                      </v-container>
+                      <!-- Daylighting Outputs-->
+                      <v-container>
+                          <h3 class="ma-0">
+                              <v-switch v-model="inputs.enable_daylight"
+                                        style="display: inline-block"
+                                        color="primary"
+                                        hide-details
+                                        class="ma-0 ml-4"
+                                        @change="
                     updateBackendData(
                       'enable_daylight',
                       inputs.enable_daylight,
                       !inputs.enable_daylight
                     )
-                  "
-                />
-                Daylighting
-              </h3>
+                  " />
+                              Daylighting
+                          </h3>
 
-              <v-card
-                v-if="da_all_metrics"
-                style="display: flex; justify-content: space-around"
-                flat
-              >
-                <v-tooltip
-                  v-for="(title, i) in metricsTitles.slice(0, -2)"
-                  :key="i"
-                  open-delay="600"
-                  bottom
-                >
-                  <template #activator="{ on, attrs }">
-                    <v-btn
-                      class="text-none"
-                      v-bind="attrs"
-                      v-on="on"
-                      @click="switchDaylightMesh(i)"
-                    >
-                      {{ title }}: {{ da_all_metrics[i] }}
-                      {{ metrics_units[title] }}
-                    </v-btn>
-                  </template>
-                  <span v-html="daylightMetricsTooltip[i]" />
-                </v-tooltip>
-              </v-card>
-              <v-card
-                v-else
-                style="padding: 15px"
-                outlined
-                center
-                height="100px"
-              >
-                Daylighting not computed yet!
-              </v-card>
-            </v-container>
-            <!-- Energy Outputs-->
-            <v-container style="display: flex; flex-direction: column">
-              <h3 class="ma-0">
-                <v-switch
-                  v-model="inputs.enable_energy"
-                  style="display: inline-block"
-                  color="primary"
-                  hide-details
-                  class="ma-0 ml-4"
-                  @change="
+                          <v-card v-if="da_all_metrics"
+                                  style="display: flex; justify-content: space-around"
+                                  flat>
+                              <v-tooltip v-for="(title, i) in metricsTitles.slice(0, -2)"
+                                         :key="i"
+                                         open-delay="600"
+                                         bottom>
+                                  <template #activator="{ on, attrs }">
+                                      <v-btn class="text-none"
+                                             v-bind="attrs"
+                                             v-on="on"
+                                             @click="switchDaylightMesh(i)">
+                                          {{ title }}: {{ da_all_metrics[i] }}
+                                          {{ metrics_units[title] }}
+                                      </v-btn>
+                                  </template>
+                                  <span v-html="daylightMetricsTooltip[i]" />
+                              </v-tooltip>
+                          </v-card>
+                          <v-card v-else
+                                  style="padding: 15px"
+                                  outlined
+                                  center
+                                  height="100px">
+                              Daylighting not computed yet!
+                          </v-card>
+                      </v-container>
+                      <!-- Energy Outputs-->
+                      <v-container style="display: flex; flex-direction: column">
+                          <h3 class="ma-0">
+                              <v-switch v-model="inputs.enable_energy"
+                                        style="display: inline-block"
+                                        color="primary"
+                                        hide-details
+                                        class="ma-0 ml-4"
+                                        @change="
                     updateBackendData(
                       'enable_energy',
                       inputs.enable_energy,
                       !inputs.enable_energy
                     )
-                  "
-                />Energy Needs
-              </h3>
+                  " />Energy Needs
+                          </h3>
 
-              <v-card
-                v-if="energy_loads"
-                flat
-                height="100px"
-                style="
+                          <v-card v-if="energy_loads"
+                                  flat
+                                  height="100px"
+                                  style="
                   display: flex;
                   flex-direction: row;
                   justify-content: space-around;
-                "
-              >
-                <v-tooltip
-                  bottom
-                  open-delay="500"
-                >
-                  <template #activator="{ on, attrs }">
-                    <div
-                      v-bind="attrs"
-                      style="
+                ">
+                              <v-tooltip bottom
+                                         open-delay="500">
+                                  <template #activator="{ on, attrs }">
+                                      <div v-bind="attrs"
+                                           style="
                         display: flex;
                         flex-direction: column;
                         padding: 15px;
                       "
-                      v-on="on"
-                    >
-                      <div>{{ metricsTitles[4] }}:</div>
-                      <div style="text-align: center">
-                        {{ round2(energy_loads[0]) }} kWh/m2
-                      </div>
-                    </div>
-                  </template>
-                  <span v-html="daylightMetricsTooltip[4]" />
-                </v-tooltip>
-                <v-tooltip bottom>
-                  <template #activator="{ on, attrs }">
-                    <div
-                      v-bind="attrs"
-                      style="
+                                           v-on="on">
+                                          <div>{{ metricsTitles[4] }}:</div>
+                                          <div style="text-align: center">
+                                              {{ round2(energy_loads[0]) }} kWh/m2
+                                          </div>
+                                      </div>
+                                  </template>
+                                  <span v-html="daylightMetricsTooltip[4]" />
+                              </v-tooltip>
+                              <v-tooltip bottom>
+                                  <template #activator="{ on, attrs }">
+                                      <div v-bind="attrs"
+                                           style="
                         display: flex;
                         flex-direction: column;
                         padding: 15px;
                       "
-                      v-on="on"
-                    >
-                      <div>{{ metricsTitles[5] }}:</div>
-                      <div style="text-align: center">
-                        {{ round2(energy_loads[1]) }} kWh/m2
-                      </div>
-                    </div>
-                  </template>
-                  <span v-html="daylightMetricsTooltip[5]" />
-                </v-tooltip>
-                <div
-                  style="display: flex; flex-direction: column; padding: 15px"
-                >
-                  <div>Total:</div>
-                  <div style="text-align: center">
-                    {{ round2(energy_loads[0] + energy_loads[1]) }} kWh/m2
+                                           v-on="on">
+                                          <div>{{ metricsTitles[5] }}:</div>
+                                          <div style="text-align: center">
+                                              {{ round2(energy_loads[1]) }} kWh/m2
+                                          </div>
+                                      </div>
+                                  </template>
+                                  <span v-html="daylightMetricsTooltip[5]" />
+                              </v-tooltip>
+                              <div style="display: flex; flex-direction: column; padding: 15px">
+                                  <div>Total:</div>
+                                  <div style="text-align: center">
+                                      {{ round2(energy_loads[0] + energy_loads[1]) }} kWh/m2
+                                  </div>
+                              </div>
+                          </v-card>
+                          <v-card v-else
+                                  outlined
+                                  center
+                                  height="100px">
+                              Energy loads not computed yet!
+                          </v-card>
+                          <v-card outlined
+                                  center>
+                              <StackedBarChart :key="stacked_bar_key"
+                                               :raw-data="energy_total_loads_metrics_tree"
+                                               :categories="energy_categories"
+                                               :outer-width="600"
+                                               :outer-height="400"
+                                               :category-colors="energy_categories_colors" />
+                          </v-card>
+                      </v-container>
+                  </v-container>
+              </v-tab-item>
+              <v-tab-item class="comparision_tab">
+                  <div style="display: flex; justify-content: center">
+                      <v-select v-model="sortCompareAltsByMetric"
+                                label="Sort By:"
+                                density="compact"
+                                :items="['Timestamp', ...metricsTitles]"
+                                item-text="name"
+                                style="margin-top: 10px; width: 200px; flex-grow: inherit"
+                                outlined
+                                @change="updateAlts" />
                   </div>
-                </div>
-              </v-card>
-              <v-card
-                v-else
-                outlined
-                center
-                height="100px"
-              >
-                Energy loads not computed yet!
-              </v-card>
-              <v-card
-                outlined
-                center
-              >
-                <StackedBarChart
-                  :key="stacked_bar_key"
-                  :raw-data="energy_total_loads_metrics_tree"
-                  :categories="energy_categories"
-                  :outer-width="600"
-                  :outer-height="400"
-                  :category-colors="energy_categories_colors"
-                />
-              </v-card>
-            </v-container>
-          </v-container>
-        </v-tab-item>
-        <v-tab-item class="comparision_tab">
-          <div style="display: flex; justify-content: center">
-            <v-select
-              v-model="sortCompareAltsByMetric"
-              label="Sort By:"
-              density="compact"
-              :items="['Timestamp', ...metricsTitles]"
-              item-text="name"
-              style="margin-top: 10px; width: 200px; flex-grow: inherit"
-              outlined
-              @change="updateAlts"
-            />
-          </div>
 
-          <v-container
-            style="
+                  <v-container style="
               margin-left: 0px;
               margin-right: 0px;
               width: 100%;
               max-width: 100%;
-            "
-          >
-            <v-radio-group
-              key="comparision_alts_key"
-              v-model="selected_option_comparison"
-              class="comparision_radio_group"
-            >
-              <div>
-                <AltCard
-                  v-if="currentAlt != null && isZoneSet"
-                  :alt="currentAlt"
-                  :benchmark-diffs="benchmark_diffs"
-                  :comparision-tab-params-expansion="
+            ">
+                      <v-radio-group key="comparision_alts_key"
+                                     v-model="selected_option_comparison"
+                                     class="comparision_radio_group">
+                          <div>
+                              <AltCard v-if="currentAlt != null && isZoneSet"
+                                       :alt="currentAlt"
+                                       :benchmark-diffs="benchmark_diffs"
+                                       :comparision-tab-params-expansion="
                     comparision_tab_params_expansion
                   "
-                  :metrics-units="metrics_units"
-                  :selected-benchmark="selected_benchmark"
-                  :selected-option-comparison="selected_option_comparison"
-                  :is-current="true"
-                  @on-save-alt="updateAlts"
-                />
-              </div>
-              <div
-                v-for="alt in otherAlts"
-                :key="alt.data.num"
-              >
-                <AltCard
-                  v-if="alt != null"
-                  :alt="alt"
-                  :benchmark-diffs="benchmark_diffs"
-                  :comparision-tab-params-expansion="
+                                       :metrics-units="metrics_units"
+                                       :selected-benchmark="selected_benchmark"
+                                       :selected-option-comparison="selected_option_comparison"
+                                       :is-current="true"
+                                       @on-save-alt="updateAlts" />
+                          </div>
+                          <div v-for="alt in otherAlts"
+                               :key="alt.data.num">
+                              <AltCard v-if="alt != null"
+                                       :alt="alt"
+                                       :benchmark-diffs="benchmark_diffs"
+                                       :comparision-tab-params-expansion="
                     comparision_tab_params_expansion
                   "
-                  :metrics-units="metrics_units"
-                  :selected-benchmark="selected_benchmark"
-                  :selected-option-comparison="selected_option_comparison"
-                  :is-current="false"
-                  @on-delete-alt="updateAlts"
-                />
-              </div>
-            </v-radio-group>
-          </v-container>
-        </v-tab-item>
-        <v-tab-item>
-          <div
-            style="display: flex; flex-direction: column; align-items: center"
-          >
-            <p style="margin-top: 15px; font-size: medium; text-align: center">
-              On this panel, you can run parametric analysis studies to
-              understand the impact that different parameters have on the
-              performance of your design.<br>
-              <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
-              1. Pick the parameters you which to analyze. The values for
-              the unselected parameters may be based on the current alternative or custom picked values. The values set here will be applied to all walls.
-            </p>
-            <v-expansion-panels
-              v-model="analyze_tab_expansion"
-              style="padding: 10px"
-              multiple
-            >
-              <v-expansion-panel
-                v-for="paramType in ['Geometry', 'Material']"
-                :key="paramType"
-                style="text-align: center"
-              >
-                <v-expansion-panel-header>
-                  {{ paramType }} Parameters
-                </v-expansion-panel-header>
-                <v-expansion-panel-content
-                  class="align-center"
-                  style="text-align: -webkit-center"
-                >
-                  <table>
-                    <tr>
-                      <td
-                        colspan="2"
-                        style="font-size:small"
-                      >
-                        Check the parameters to include:
-                      </td>
-                      <td />
+                                       :metrics-units="metrics_units"
+                                       :selected-benchmark="selected_benchmark"
+                                       :selected-option-comparison="selected_option_comparison"
+                                       :is-current="false"
+                                       @on-delete-alt="updateAlts" />
+                          </div>
+                      </v-radio-group>
+                  </v-container>
+              </v-tab-item>
+              <v-tab-item>
+                  <div style="display: flex; flex-direction: column; align-items: center">
+                      <p style="margin-top: 15px; font-size: medium; text-align: center">
+                          On this panel, you can run parametric analysis studies to
+                          understand the impact that different parameters have on the
+                          performance of your design.<br>
+                          <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
+                          1. Pick the parameters you which to analyze. The values for
+                          the unselected parameters may be based on the current alternative or custom picked values. The values set here will be applied to all walls.
+                      </p>
+                      <v-expansion-panels v-model="analyze_tab_expansion"
+                                          style="padding: 10px"
+                                          multiple>
+                          <v-expansion-panel v-for="paramType in ['Geometry', 'Material']"
+                                             :key="paramType"
+                                             style="text-align: center">
+                              <v-expansion-panel-header>
+                                  {{ paramType }} Parameters
+                              </v-expansion-panel-header>
+                              <v-expansion-panel-content class="align-center"
+                                                         style="text-align: -webkit-center">
+                                  <table>
+                                      <tr>
+                                          <td colspan="2"
+                                              style="font-size:small">
+                                              Check the parameters to include:
+                                          </td>
+                                          <td />
 
-                      <td style="font-size: small; text-align: center">
-                        <v-tooltip bottom>
-                          <template #activator="{ on, attrs }">
-                            <div
-                              style="
+                                          <td style="font-size: small; text-align: center">
+                                              <v-tooltip bottom>
+                                                  <template #activator="{ on, attrs }">
+                                                      <div style="
                                 display: flex;
                                 flex-direction: row;
                                 align-items: center;
-                              "
-                            >
-                              <svg
-                                v-bind="attrs"
-                                width="20"
-                                height="20"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg"
-                                v-on="on"
-                              >
-                                <path
-                                  d="M23 12C23 18.0751 18.0751 23 12 23C5.92487 23 1 18.0751 1 12C1 5.92487 5.92487 1 12 1C18.0751 1 23 5.92487 23 12ZM3.00683 12C3.00683 16.9668 7.03321 20.9932 12 20.9932C16.9668 20.9932 20.9932 16.9668 20.9932 12C20.9932 7.03321 16.9668 3.00683 12 3.00683C7.03321 3.00683 3.00683 7.03321 3.00683 12Z"
-                                  fill="#777777"
-                                />
-                                <path
-                                  d="M13.5 18C13.5 18.8284 12.8284 19.5 12 19.5C11.1716 19.5 10.5 18.8284 10.5 18C10.5 17.1716 11.1716 16.5 12 16.5C12.8284 16.5 13.5 17.1716 13.5 18Z"
-                                  fill="#777777"
-                                />
-                                <path
-                                  d="M11 12V14C11 14 11 15 12 15C13 15 13 14 13 14V12C13 12 13.4792 11.8629 13.6629 11.7883C13.6629 11.7883 13.9969 11.6691 14.2307 11.4896C14.4646 11.3102 14.6761 11.097 14.8654 10.8503C15.0658 10.6035 15.2217 10.3175 15.333 9.99221C15.4443 9.66693 15.5 9.4038 15.5 9C15.5 8.32701 15.3497 7.63675 15.0491 7.132C14.7596 6.61604 14.3476 6.21786 13.8132 5.93745C13.2788 5.64582 12.6553 5.5 11.9427 5.5C11.4974 5.5 11.1021 5.55608 10.757 5.66825C10.4118 5.7692 10.1057 5.9094 9.83844 6.08887C9.58236 6.25712 9.36525 6.4478 9.18711 6.66091C9.02011 6.86281 8.8865 7.0591 8.78629 7.24978C8.68609 7.44046 8.61929 7.6087 8.58589 7.75452C8.51908 7.96763 8.49125 8.14149 8.50238 8.27609C8.52465 8.41069 8.59145 8.52285 8.70279 8.61258C8.81413 8.70231 8.9867 8.79765 9.22051 8.8986C9.46546 8.97712 9.65473 9.00516 9.78834 8.98273C9.93308 8.96029 10.05 8.89299 10.1391 8.78083C10.1391 8.78083 10.6138 8.10569 10.7474 7.97109C10.8922 7.82528 11.0703 7.71312 11.2819 7.6346C11.4934 7.54487 11.7328 7.5 12 7.5C12.579 7.5 13.0076 7.64021 13.286 7.92062C13.5754 8.18982 13.6629 8.41629 13.6629 8.93225C13.6629 9.27996 13.6017 9.56038 13.4792 9.77349C13.3567 9.9866 13.1953 10.1605 12.9949 10.2951C12.9949 10.2951 12.7227 10.3991 12.5 10.5C12.2885 10.5897 11.9001 10.7381 11.6997 10.8503C11.5104 10.9512 11.4043 11.0573 11.2819 11.2144C11.1594 11.3714 11 11.7308 11 12Z"
-                                  fill="#777777"
-                                />
-                              </svg>
-                              <div style="margin-left: 4px">
-                                Num Steps
-                              </div>
-                            </div>
-                          </template>
-                          <span>
-                            Num steps includes the min + max + steps in between.
-                            <br>
-                            So 2 steps means only min and max, and 3 steps adds
-                            a point in the middle to that.
-                          </span>
-                        </v-tooltip>
-                      </td>
-                    </tr>
-                    <tr
-                      v-for="param in parametricAnalysisData.filter(
-                        (x) => x.type === paramType
-                      )"
-                      :key="param.name"
-                    >
-                      <td>
-                        <input
-                          :id="param.name"
-                          v-model="param.checked"
-                          type="checkbox"
-                          @change="updateParametricAnalysisData(param.name)"
-                        >
-                      </td>
-                      <td style="font-size: small">
-                        {{ param.title }}
-                      </td>
-                      <td
-                        v-if="param.checked"
-                        style="width: 180px; display: flex; flex-direction: row"
-                      >
-                        <v-text-field
-                          v-model.number="param.range[0]"
-                          type="number"
-                          label="min"
-                          hide-details
-                        />
+                              ">
+                                                          <svg v-bind="attrs"
+                                                               width="20"
+                                                               height="20"
+                                                               fill="none"
+                                                               viewBox="0 0 24 24"
+                                                               xmlns="http://www.w3.org/2000/svg"
+                                                               v-on="on">
+                                                              <path d="M23 12C23 18.0751 18.0751 23 12 23C5.92487 23 1 18.0751 1 12C1 5.92487 5.92487 1 12 1C18.0751 1 23 5.92487 23 12ZM3.00683 12C3.00683 16.9668 7.03321 20.9932 12 20.9932C16.9668 20.9932 20.9932 16.9668 20.9932 12C20.9932 7.03321 16.9668 3.00683 12 3.00683C7.03321 3.00683 3.00683 7.03321 3.00683 12Z"
+                                                                    fill="#777777" />
+                                                              <path d="M13.5 18C13.5 18.8284 12.8284 19.5 12 19.5C11.1716 19.5 10.5 18.8284 10.5 18C10.5 17.1716 11.1716 16.5 12 16.5C12.8284 16.5 13.5 17.1716 13.5 18Z"
+                                                                    fill="#777777" />
+                                                              <path d="M11 12V14C11 14 11 15 12 15C13 15 13 14 13 14V12C13 12 13.4792 11.8629 13.6629 11.7883C13.6629 11.7883 13.9969 11.6691 14.2307 11.4896C14.4646 11.3102 14.6761 11.097 14.8654 10.8503C15.0658 10.6035 15.2217 10.3175 15.333 9.99221C15.4443 9.66693 15.5 9.4038 15.5 9C15.5 8.32701 15.3497 7.63675 15.0491 7.132C14.7596 6.61604 14.3476 6.21786 13.8132 5.93745C13.2788 5.64582 12.6553 5.5 11.9427 5.5C11.4974 5.5 11.1021 5.55608 10.757 5.66825C10.4118 5.7692 10.1057 5.9094 9.83844 6.08887C9.58236 6.25712 9.36525 6.4478 9.18711 6.66091C9.02011 6.86281 8.8865 7.0591 8.78629 7.24978C8.68609 7.44046 8.61929 7.6087 8.58589 7.75452C8.51908 7.96763 8.49125 8.14149 8.50238 8.27609C8.52465 8.41069 8.59145 8.52285 8.70279 8.61258C8.81413 8.70231 8.9867 8.79765 9.22051 8.8986C9.46546 8.97712 9.65473 9.00516 9.78834 8.98273C9.93308 8.96029 10.05 8.89299 10.1391 8.78083C10.1391 8.78083 10.6138 8.10569 10.7474 7.97109C10.8922 7.82528 11.0703 7.71312 11.2819 7.6346C11.4934 7.54487 11.7328 7.5 12 7.5C12.579 7.5 13.0076 7.64021 13.286 7.92062C13.5754 8.18982 13.6629 8.41629 13.6629 8.93225C13.6629 9.27996 13.6017 9.56038 13.4792 9.77349C13.3567 9.9866 13.1953 10.1605 12.9949 10.2951C12.9949 10.2951 12.7227 10.3991 12.5 10.5C12.2885 10.5897 11.9001 10.7381 11.6997 10.8503C11.5104 10.9512 11.4043 11.0573 11.2819 11.2144C11.1594 11.3714 11 11.7308 11 12Z"
+                                                                    fill="#777777" />
+                                                          </svg>
+                                                          <div style="margin-left: 4px">
+                                                              Num Steps
+                                                          </div>
+                                                      </div>
+                                                  </template>
+                                                  <span>
+                                                      Num steps includes the min + max + steps in between.
+                                                      <br>
+                                                      So 2 steps means only min and max, and 3 steps adds
+                                                      a point in the middle to that.
+                                                  </span>
+                                              </v-tooltip>
+                                          </td>
+                                      </tr>
+                                      <tr v-for="param in parametricAnalysisData.filter(
+                                          (x)=>
+                                          x.type === paramType
+                                          )"
+                                          :key="param.name"
+                                          >
+                                          <td>
+                                              <input :id="param.name"
+                                                     v-model="param.checked"
+                                                     type="checkbox"
+                                                     @change="updateParametricAnalysisData(param.name)">
+                                          </td>
+                                          <td style="font-size: small">
+                                              {{ param.title }}
+                                          </td>
+                                          <td v-if="param.checked"
+                                              style="width: 180px; display: flex; flex-direction: row">
+                                              <v-text-field v-model.number="param.range[0]"
+                                                            type="number"
+                                                            label="min"
+                                                            hide-details />
 
-                        <v-text-field
-                          v-model.number="param.range[1]"
-                          type="number"
-                          label="max"
-                          hide-details
-                        />
-                      </td>
-                      <td
-                        v-if="param.checked"
-                        style="font-size: small"
-                      >
-                        <v-select
-                          v-show="param.checked"
-                          v-model="param.size"
-                          style="width: 70px; margin-left: 5px"
-                          density="compact"
-                          hide-details
-                          :items="[2, 3, 4, 5]"
-                          outlined
-                          @change="updateParametricAnalysisData()"
-                        />
-                      </td>
-                      <td 
-                        v-else
-                        colspan="2"
-                        style="width: 180px; color: grey; font-size: x-small"
-                      >
-                        <v-radio-group
-                          v-model="param.defaultValueOption"
-                          class="paramAnalysisDefaultRadioGroup"
-                          hide-details
-                          row
-                          mandatory
-                        >
-                          <template #label>
-                            <div style="font-size: small">
-                              Values to use:
-                            </div>
-                          </template>
-                          <v-radio
-                            label="Same as the current alt."
-                            :value="true"
-                            style="font-size: x-small"
-                          />
-                          <v-radio
-                            label="Override default value"
-                            :value="false"
-                            style="font-size: x-small"
-                          />
-                          <v-text-field
-                            v-show="!param.defaultValueOption"
-                            v-model="parametricAnalysisOverrides[param.name]"
-                            label="New Value"
-                            type="number"
-                            style="width: 40px;"
-                          />
-                        </v-radio-group>
-                      </td>
-                    </tr>
-                  </table>
-                </v-expansion-panel-content>
-              </v-expansion-panel>
-            </v-expansion-panels>
-            <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
-            <p style="font-size: medium">
-              2. Then run the analysis. You can run an estimate first to get a
-              sense of how long the whole process will take.
-            </p>
-            <div
-              style="display: flex; flex-direction: row; align-items: baseline"
-            >
-              <div
-                style="
+                                              <v-text-field v-model.number="param.range[1]"
+                                                            type="number"
+                                                            label="max"
+                                                            hide-details />
+                                          </td>
+                                          <td v-if="param.checked"
+                                              style="font-size: small">
+                                              <v-select v-show="param.checked"
+                                                        v-model="param.size"
+                                                        style="width: 70px; margin-left: 5px"
+                                                        density="compact"
+                                                        hide-details
+                                                        :items="[2, 3, 4, 5]"
+                                                        outlined
+                                                        @change="updateParametricAnalysisData()" />
+                                          </td>
+                                          <td v-else
+                                              colspan="2"
+                                              style="width: 180px; color: grey; font-size: x-small">
+                                              <v-radio-group v-model="param.defaultValueOption"
+                                                             class="paramAnalysisDefaultRadioGroup"
+                                                             hide-details
+                                                             row
+                                                             mandatory>
+                                                  <template #label>
+                                                      <div style="font-size: small">
+                                                          Values to use:
+                                                      </div>
+                                                  </template>
+                                                  <v-radio label="Same as the current alt."
+                                                           :value="true"
+                                                           style="font-size: x-small" />
+                                                  <v-radio label="Override default value"
+                                                           :value="false"
+                                                           style="font-size: x-small" />
+                                                  <v-text-field v-show="!param.defaultValueOption"
+                                                                v-model="parametricAnalysisOverrides[param.name]"
+                                                                label="New Value"
+                                                                type="number"
+                                                                style="width: 40px;" />
+                                              </v-radio-group>
+                                          </td>
+                                      </tr>
+                                  </table>
+                              </v-expansion-panel-content>
+                          </v-expansion-panel>
+                      </v-expansion-panels>
+                      <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
+                      <p style="font-size: medium">
+                          2. Then run the analysis. You can run an estimate first to get a
+                          sense of how long the whole process will take.
+                      </p>
+                      <div style="display: flex; flex-direction: row; align-items: baseline">
+                          <div style="
                   display: flex;
                   flex-direction: column;
                   align-items: center;
-                "
-              >
-                <v-radio-group
-                  v-model="isUsingFullFactorialSampling"
-                  row
-                  mandatory
-                  hide-details
-                >
-                  <template #label>
-                    <div>Sampling Type</div>
-                  </template>
-                  <v-radio
-                    label="Factorial"
-                    :value="true"
-                  />
-                  <v-radio
-                    label="LHS"
-                    :value="false"
-                    
-                  />
-                </v-radio-group>
-                <div style="font-size: medium">
-                  Total Size: {{ parametricAnalysisTotalNumSamples }}
-                </div>
-                <v-progress-linear
-                  v-if="parametricAnalysisProgress != -1"
-                  style="width: 200px"
-                  stream
-                  :value="parametricAnalysisProgress"
-                />
-                <div
-                  v-if="parametricAnalysisProgress != -1"
-                  style="font-size: medium"
-                >
-                  Time to finish:
-                  {{
+                ">
+                              <v-radio-group v-model="isUsingFullFactorialSampling"
+                                             row
+                                             mandatory
+                                             hide-details>
+                                  <template #label>
+                                      <div>Sampling Type</div>
+                                  </template>
+                                  <v-radio label="Factorial"
+                                           :value="true" />
+                                  <v-radio label="LHS"
+                                           :value="false" />
+                              </v-radio-group>
+                              <div style="font-size: medium">
+                                  Total Size: {{ parametricAnalysisTotalNumSamples }}
+                              </div>
+                              <v-progress-linear v-if="parametricAnalysisProgress != -1"
+                                                 style="width: 200px"
+                                                 stream
+                                                 :value="parametricAnalysisProgress" />
+                              <div v-if="parametricAnalysisProgress != -1"
+                                   style="font-size: medium">
+                                  Time to finish:
+                                  {{
                     parametricAnalysisProgress == 0
                       ? "..."
                       : parametricAnalysisTimeEstimate > 60
                         ? round2(parametricAnalysisTimeEstimate / 60) + " mins"
                         : parametricAnalysisTimeEstimate + " secs"
-                  }}
-                </div>
-                <div
-                  v-show="!isUsingFullFactorialSampling"
-                  style="
+                                  }}
+                              </div>
+                              <div v-show="!isUsingFullFactorialSampling"
+                                   style="
                     display: flex;
                     flex-direction: row;
                     align-items: baseline;
-                  "
-                >
-                  <v-text-field
-                    v-model="parametricAnalysisNumSamples"
-                    label="Num Samples"
-                    type="number"
-                  />
-                  <div>
-                    ({{
+                  ">
+                                  <v-text-field v-model="parametricAnalysisNumSamples"
+                                                label="Num Samples"
+                                                type="number" />
+                                  <div>
+                                      ({{
                       round2(
                         (100 * parametricAnalysisNumSamples) /
                           parametricAnalysisTotalNumSamples
                       )
-                    }}%)
-                  </div>
-                </div>
-              </div>
-              <div
-                style="
+                                      }}%)
+                                  </div>
+                              </div>
+                          </div>
+                          <div style="
                   display: flex;
                   flex-direction: column;
                   align-items: center;
                   padding-left: 10px;
                   border-left: black solid 1px;
-                "
-              >
-                <div
-                  style="
+                ">
+                              <div style="
                   display: flex;
                   flex-direction: row;
-                  align-items: center;"
-                >
-                  <v-tooltip bottom>
-                    <template #activator="{ on, attrs }">
-                      <v-btn
-                        class="text-none"
-                        v-bind="attrs"
-                        v-on="on"
-                        @click="runParametricAnalysis(true)"
-                      >
-                        Estimate
-                        <VueElementLoading
-                          :active="showSpinnerParametricAnalysisEstimate"
-                          spinner="spinner"
-                        />
-                      </v-btn>
-                    </template>
-                    <span>
-                      Runs a single sample to get an estimate for how long will
-                      all samples take
-                    </span>
-                  </v-tooltip>
-                  <v-tooltip bottom>
-                    <template #activator="{ on, attrs }">
-                      <v-btn
-                        v-bind="attrs"
-                        :disabled="
-                          parametricAnalysisProgress != -1 ||
-                            parametricAnalysisDataSelected.length < 1
+                  align-items: center;">
+                                  <v-tooltip bottom>
+                                      <template #activator="{ on, attrs }">
+                                          <v-btn class="text-none"
+                                                 v-bind="attrs"
+                                                 v-on="on"
+                                                 @click="runParametricAnalysis(true)">
+                                              Estimate
+                                              <VueElementLoading :active="showSpinnerParametricAnalysisEstimate"
+                                                                 spinner="spinner" />
+                                          </v-btn>
+                                      </template>
+                                      <span>
+                                          Runs a single sample to get an estimate for how long will
+                                          all samples take
+                                      </span>
+                                  </v-tooltip>
+                                  <v-tooltip bottom>
+                                      <template #activator="{ on, attrs }">
+                                          <v-btn v-bind="attrs"
+                                                 :disabled="
+                                                 parametricAnalysisProgress !=-1 ||
+                                                 parametricAnalysisDataSelected.length < 1
                         "
                         style="width: 200px"
                         class="analyze_button text-none"
@@ -1339,25 +1107,25 @@
                           spinner="spinner"
                         />
                       </v-btn>
-                    </template>
-                    <span>
-                      Runs the full analysis.
-                    </span>
-                  </v-tooltip>
-                </div>
-                <span style="font-size: medium">
-                  Single Sample Time:
-                  {{
+                                      </template>
+                                      <span>
+                                          Runs the full analysis.
+                                      </span>
+                                  </v-tooltip>
+                              </div>
+                              <span style="font-size: medium">
+                                  Single Sample Time:
+                                  {{
                     parametricAnalysisLatestDiff > 0
                       ? round2(parametricAnalysisLatestDiff / 1000)
                       : "--"
-                  }}
-                  Secs
-                </span>
+                                  }}
+                                  Secs
+                              </span>
 
-                <div style="font-size: medium">
-                  Total time needed:
-                  {{
+                              <div style="font-size: medium">
+                                  Total time needed:
+                                  {{
                     parametricAnalysisLatestDiff > 0
                       ? round2(
                         ((isUsingFullFactorialSampling
@@ -1366,137 +1134,112 @@
                           (parametricAnalysisLatestDiff / 1000)) /
                           60)
                       : "--"
-                  }}
-                  mins
-                </div>
-              </div>
-            </div>
-            <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
-            <p style="font-size: medium">
-              3. Then  <v-btn
-                style="width: 200px"
-                class="analyze_button text-none"
-                @click="modelling_tab = 4"
-              >
-                Visualize
-              </v-btn>
-            </p>
-          </div>
+                                  }}
+                                  mins
+                              </div>
+                          </div>
+                      </div>
+                      <v-divider style="max-height: 10px; width:100%; margin-top: 5px; margin-bottom: 10px;" />
+                      <p style="font-size: medium">
+                          3. Then  <v-btn style="width: 200px"
+                                          class="analyze_button text-none"
+                                          @click="modelling_tab = 4">
+                              Visualize
+                          </v-btn>
+                      </p>
+                  </div>
 
-          <div v-if="debug">
-            <div>{{ parametricAnalysisSamples }}</div>
-            <div>{{ parametricAnalysisModelsSlopes }}</div>
-            <div>{{ parametricAnalysisModelsIntercepts }}</div>
-            <div>{{ parametricAnalysisModelsCorrelations }}</div>
-            <div>{{ parametricAnalysisSortedFilteredSensitivites }}</div>
-            <div
-              v-for="param in Object.keys(parametricAnalysisModelsSlopes)"
-              :key="param"
-              style="display: flex; flex-direction: row; align-items: center"
-            >
-              <div style="width: 85px; font-size: small">
-                {{ param }}
-              </div>
-            </div>
-            <v-slider
-              v-model="notableSlopeThreshold"
-              :min="0"
-              :max="1"
-              :step="0.05"
-              show-ticks="always"
-              tick-size="4"
-              label="Slope Threhold"
-              hide-details
-              style="width: 300px"
-              @end="updateMaxParametricAnalysisRegression"
-            >
-              <template #append>
-                <v-text-field
-                  v-model="notableSlopeThreshold"
-                  type="number"
-                  style="width: 40px"
-                  class="ma-0 pa-0"
-                  density="compact"
-                  hide-details
-                  variant="outlined"
-                />
-              </template>
-            </v-slider>
-          </div>
-        </v-tab-item>
-        <v-tab-item>
-          <div
-            style="
+                  <div v-if="debug">
+                      <div>{{ parametricAnalysisSamples }}</div>
+                      <div>{{ parametricAnalysisModelsSlopes }}</div>
+                      <div>{{ parametricAnalysisModelsIntercepts }}</div>
+                      <div>{{ parametricAnalysisModelsCorrelations }}</div>
+                      <div>{{ parametricAnalysisSortedFilteredSensitivites }}</div>
+                      <div v-for="param in Object.keys(parametricAnalysisModelsSlopes)"
+                           :key="param"
+                           style="display: flex; flex-direction: row; align-items: center">
+                          <div style="width: 85px; font-size: small">
+                              {{ param }}
+                          </div>
+                      </div>
+                      <v-slider v-model="notableSlopeThreshold"
+                                :min="0"
+                                :max="1"
+                                :step="0.05"
+                                show-ticks="always"
+                                tick-size="4"
+                                label="Slope Threhold"
+                                hide-details
+                                style="width: 300px"
+                                @end="updateMaxParametricAnalysisRegression">
+                          <template #append>
+                              <v-text-field v-model="notableSlopeThreshold"
+                                            type="number"
+                                            style="width: 40px"
+                                            class="ma-0 pa-0"
+                                            density="compact"
+                                            hide-details
+                                            variant="outlined" />
+                          </template>
+                      </v-slider>
+                  </div>
+              </v-tab-item>
+              <v-tab-item>
+                  <div style="
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 padding: 10px;
-              "
-          >
-            <div
-              style="
+              ">
+                      <div style="
                   display: flex;
                   flex-direction: column;
                   align-items: center;
                   padding: 10px;
-                "
-            >
-              <p style="font-size: medium">
-                3. When the analysis is completed, charts will be shown below. <br>
-                The bar charts indicate which parameters have the highest impact on
-                each performance metric. The Design Explorer can be used to explore and filter the design space.
-              </p>
-              <div>
-                <v-select
-                  v-model="currentAnalysisName"
-                  label="Select Analysis"
-                  :items="sortedAnalysisFolders"
-                  
-                />
-                <v-btn
-                  style="width: 200px"
-                  class="analyze_button text-none"
-                  variant="plain"
-                  @click="visualizeAnalysis()"
-                >
-                  Visualize
-                </v-btn>
-                <v-btn
-                  style="width: 200px"
-                  class="analyze_button text-none"
-                  variant="plain"
-                  @click="openAnalysisFolder()"
-                >
-                  Analysis Folder
-                </v-btn>
-              </div>
-            </div>
-            <div
-              style="
+                ">
+                          <p style="font-size: medium">
+                              3. When the analysis is completed, charts will be shown below. <br>
+                              The bar charts indicate which parameters have the highest impact on
+                              each performance metric. The Design Explorer can be used to explore and filter the design space.
+                          </p>
+                          <div>
+                              <v-select v-model="currentAnalysisName"
+                                        label="Select Analysis"
+                                        :items="sortedAnalysisFolders" />
+                              <v-btn style="width: 200px"
+                                     class="analyze_button text-none"
+                                     variant="plain"
+                                     @click="visualizeAnalysis()">
+                                  Visualize
+                              </v-btn>
+                              <v-btn style="width: 200px"
+                                     class="analyze_button text-none"
+                                     variant="plain"
+                                     @click="openAnalysisFolder()">
+                                  Analysis Folder
+                              </v-btn>
+                          </div>
+                      </div>
+                      <div style="
                   display: flex;
                   flex-direction: row;
                   flex-wrap: wrap;
                   margin-top: 20px;
-                "
-            >
-              <DivergingBarChart
-                v-for="o in parametricAnalysisSortedFilteredSensitivites"
-                :key="o.id"
-                :title="o.name"
-                :data="o.children"
-              />
-            </div>
-          </div>
-          <iframe
-            v-show="showAnalysisVisualization"
-            id="visualize_iframe"
-            src="DesignExplorer-gh-pages\index.html"
-            width="1200"
-            height="800"
-          />
-        </v-tab-item>
-      </v-tabs-items>
-    </v-container>
+                ">
+                          <DivergingBarChart v-for="o in parametricAnalysisSortedFilteredSensitivites"
+                                             :key="o.id"
+                                             :title="o.name"
+                                             :data="o.children" />
+                      </div>
+                  </div>
+                  <iframe v-show="showAnalysisVisualization"
+                          id="visualize_iframe"
+                          src="DesignExplorer-gh-pages\index.html"
+                          width="1200"
+                          height="800" />
+              </v-tab-item>
+          </v-tabs-items>
+      </v-container>
   </div>
 </template>
 
@@ -3287,11 +3030,11 @@ export default {
 .comparision_tab .v-expansion-panel-header::v-deep {
   min-height: fit-content;
 }
-.loading-element {
-  position: absolute !important;
-  top: 50px;
-  right: 50px;
-}
+    .loading-element {
+        position: absolute !important;
+        top: 25px;
+        right: 50px;
+    }
 
 .prediction_element {
   border: 1px black solid;
