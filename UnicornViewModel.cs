@@ -694,7 +694,7 @@ namespace DPredict.ViewModels
             {
                 // first get running excel app & workbook
                 Excel.Workbook workbook = null;
-                Excel.Application excelApp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
+                Excel.Application excelApp = (Excel.Application)Marshal2.GetActiveObject("Excel.Application");
                 foreach (Excel.Workbook xlWorkbook in excelApp.Workbooks)
                 {
                     if (xlWorkbook.FullName == epcSpreadsheet)
@@ -1289,7 +1289,7 @@ namespace DPredict.ViewModels
 
         async internal Task RunParametricAnalysis(string samplesJSON, string focusDictStr, string overrideParams)
         {
-
+            isParametricAnalysisRunning = true;
             Dictionary<string, int> focusDict = JsonConvert.DeserializeObject<Dictionary<string, int>>(focusDictStr);
 
             List<Dictionary<string, string>> samples = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(samplesJSON);
@@ -1326,9 +1326,16 @@ namespace DPredict.ViewModels
             }
             //--------------end csv prep
 
-                int num = 0;
+            int num = 0;
+            Alternative benchmark = CloneAlt(currentAlternative);
             foreach (Dictionary<string, string> sample in samples)
             {
+                if (!isParametricAnalysisRunning)
+                {
+                    UnicornPlugin.UIInterop.UpdateParametricAnalysisProgress(-1, 0, false);
+                    break;
+                }
+
                 Dictionary<string, string> alt = new Dictionary<string, string>(sample);
                 // Append param overrides to alt
                 foreach (KeyValuePair<string, string> pair in paramOverrides)
@@ -1336,7 +1343,6 @@ namespace DPredict.ViewModels
                     alt[pair.Key] = pair.Value;
                 }
 
-                Alternative benchmark = CloneAlt(currentAlternative);
                 // Setting WWRs array to zeros initially
                 int numWalls = ((double[])benchmark.data["WWR_per_wall"]).Length;
                 double[] initWWR = Enumerable.Repeat(0.00, numWalls).ToArray();
@@ -1487,7 +1493,7 @@ namespace DPredict.ViewModels
             //------------- calculating and sending correlation results to front-end -------
             if (allOutputs.Count > 0)
             {
-                ComputeThenVisualizeCorrelations(paramNames.ToList(), samples, allOutputs, focusDict);
+                ComputeThenVisualizeCorrelations(paramNames.ToList(), samples.Take(num).ToList(), allOutputs.Take(num).ToList(), focusDict);
             }
 
         }
@@ -1619,7 +1625,7 @@ namespace DPredict.ViewModels
             if (loadToRhino)
                 UnicornPlugin.UIInterop.ShowUILoaderAsync(true);
 
-            ComputeServer.WebAddress = "http://localhost:8081/"; // port 5000 is rhino.compute, 8081 is compute.geometry
+            ComputeServer.WebAddress = "http://localhost:5000"; // port 5000 is rhino.compute, 8081 is compute.geometry
                                                                  //ComputeServer.ApiKey = "";
 
             string definitionName = "ParametricRoom_Latest.gh";
@@ -2483,6 +2489,10 @@ namespace DPredict.ViewModels
             });
         }
 
-        
+        private bool isParametricAnalysisRunning = false;
+        internal void SetStopParametricAnalysis()
+        {
+            isParametricAnalysisRunning = false;
+        }
     }
 }

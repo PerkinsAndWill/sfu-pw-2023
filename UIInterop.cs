@@ -188,6 +188,11 @@ namespace DPredict
             await ViewModel.RunParametricAnalysisEstimate(input);
         }
 
+        public async Task StopParametricAnalysis()
+        {
+            ViewModel.SetStopParametricAnalysis();
+        }
+
         public void OpenAnalysisFolder()
         {
             ViewModel.OpenAnalysisFolder();
