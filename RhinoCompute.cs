@@ -13,7 +13,7 @@ namespace Rhino.Compute
 {
     public static class ComputeServer
     {
-        public static string WebAddress { get; set; } = "http://localhost:8081";
+        public static string WebAddress { get; set; } = "http://localhost:5000";
         public static string AuthToken { get; set; }
         public static string ApiKey { get; set; }
         public static string Version => "0.12.0";
@@ -25,8 +25,8 @@ namespace Rhino.Compute
 
         public static T PostWithConverter<T>(string function, JsonConverter converter, params object[] postData)
         {
-            if (string.IsNullOrWhiteSpace(AuthToken) && WebAddress.Equals("http://localhost:8081"))
-                throw new UnauthorizedAccessException("AuthToken must be set for compute.rhino3d.com");
+            //if (string.IsNullOrWhiteSpace(AuthToken) && WebAddress.Equals("http://localhost:8081"))
+            //    throw new UnauthorizedAccessException("AuthToken must be set for compute.rhino3d.com");
 
             for (int i = 0; i < postData.Length; i++)
             {
