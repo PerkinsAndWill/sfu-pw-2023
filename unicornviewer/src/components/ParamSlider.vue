@@ -59,6 +59,8 @@
           density="compact"
           hide-details
           variant="outlined"
+          @enter="() => { updateBackendData(modelName, model_internal);}"
+          @blur="() => { updateBackendData(modelName, model_internal);}"
         />
       </template>
     </v-slider>

@@ -219,11 +219,7 @@
                                               label="Floor to Floor [m]"
                                               hide-details
                                               @end="
-                      updateBackendData(
-                        'floor_to_floor',
-                        inputs.floor_to_floor,
-                        false
-                      )
+                      updateInputs('floor_to_floor')
                     ">
                                         <template #append>
                                             <v-text-field v-model="inputs.floor_to_floor"
@@ -231,7 +227,9 @@
                                                           style="width: 80px"
                                                           density="compact"
                                                           hide-details
-                                                          variant="outlined" />
+                                                        variant="outlined" 
+                                                          @enter="updateInputs('floor_to_floor')"
+                                                          @blur="updateInputs('floor_to_floor')"/>
                                         </template>
                                     </v-slider>
                                     <v-slider v-model="inputs.number_of_floors"
@@ -243,11 +241,7 @@
                                               label="Number of Floors"
                                               hide-details
                                               @end="
-                      updateBackendData(
-                        'number_of_floors',
-                        inputs.number_of_floors,
-                        false
-                      )
+                      updateInputs('number_of_floors')
                     ">
                                         <template #append>
                                             <v-text-field v-model="inputs.number_of_floors"
@@ -255,7 +249,9 @@
                                                           style="width: 80px"
                                                           density="compact"
                                                           hide-details
-                                                          variant="outlined" />
+                                                          variant="outlined" 
+                                                          @enter="updateInputs('number_of_floors')"
+                                                          @blur="updateInputs('number_of_floors')"/>
                                         </template>
                                     </v-slider>
                                     <v-slider v-model="inputs.footprint_offset"
@@ -267,11 +263,7 @@
                                               label="Footprint V. Offset from Ground [m]"
                                               hide-details
                                               @end="
-                      updateBackendData(
-                        'footprint_offset',
-                        inputs.footprint_offset,
-                        false
-                      )
+                      updateInputs('footprint_offset')
                     ">
                                         <template #append>
                                             <v-text-field v-model="inputs.footprint_offset"
@@ -279,7 +271,9 @@
                                                           style="width: 80px"
                                                           density="compact"
                                                           hide-details
-                                                          variant="outlined" />
+                                                          variant="outlined" 
+                                                          @enter="updateInputs('footprint_offset')"
+                                                          @blur="updateInputs('footprint_offset')"/>
                                         </template>
                                     </v-slider>
                                 </v-container>
@@ -1280,6 +1274,7 @@
             return {
                 debug: false,
                 //Inputs
+                dummy: -1,
                 inputs: {
                     enable_energy: false,
                     enable_daylight: true,
@@ -2116,6 +2111,12 @@
 
             setUniqueSessionAltNum(num) {
                 this.uniqueSessionAltNum = JSON.parse(num);
+            },
+            updateInputs(key) {
+                //let key_list = ["floor_to_floor", "number_of_floors", "footprint_offset"]
+                //if (key_list.indexOf(key) >= 0) {
+                    this.updateBackendData(key, this.inputs[key], false)
+                //}
             },
 
             updateSelectedWalls() {
