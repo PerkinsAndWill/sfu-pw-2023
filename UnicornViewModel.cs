@@ -25,6 +25,8 @@ using Mesh = Rhino.Geometry.Mesh;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
 using System.Windows;
+using Rhino.Render.ChangeQueue;
+using System.Xml.Linq;
 
 namespace DPredict.ViewModels
 {
@@ -294,17 +296,23 @@ namespace DPredict.ViewModels
 
                         // Store current view
                         RhinoView oldView = null;
+                        Guid oldViewportId = Guid.Empty;
                         int index = -1;
                         bool oldViewMaximized = false;
                         if (doc.Views.ActiveView != null)
                         {
                             oldView = doc.Views.ActiveView;
-                            index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldView.ActiveViewportID);
+                            oldViewportId = oldView.ActiveViewportID;
+                            index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldViewportId);
                             oldViewMaximized = oldView.Maximized;
                         }
 
                         // Create and set up a new view
-                        RhinoView view = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(0, 0, 800, 600), true);
+                        RhinoView view = doc.Views.Find("ParametricAnalysisView", false);
+                        if (view == null)
+                        {
+                            view = doc.Views.Add("ParametricAnalysisView", DefinedViewportProjection.Perspective, new Rectangle(-10000,-10000, 800, 600), true);
+                        }
                         if (view == null)
                         {
                             RhinoApp.WriteLine("Failed to create a new view.");
@@ -312,23 +320,21 @@ namespace DPredict.ViewModels
                         }
                         List<RhinoObject> allObjs = doc.Objects.Where(obj => obj != null).ToList();
 
-                        //Hide everything else so we could capture only our objects
+                        ////Hide everything else so we could capture only our objects
                         allObjs.ForEach(obj =>
                         {
-                            Rhino.RhinoDoc.ActiveDoc.Objects.Hide(obj.Id, true);
+                            if (objectGuids.Contains(obj.Id)) {
+                                ObjectAttributes attributes = obj.Attributes;
+                                attributes.ViewportId = view.ActiveViewportID;
+                                doc.Objects.ModifyAttributes(obj.Id, attributes, true);
+                            }
+                            else
+                            {
+                                ObjectAttributes attributes = obj.Attributes;
+                                attributes.ViewportId = oldViewportId;
+                                doc.Objects.ModifyAttributes(obj.Id, attributes, true);
+                            }
                         });
-
-
-                        objectsLst.ForEach(obj =>
-                        {
-                            Rhino.RhinoDoc.ActiveDoc.Objects.Show(obj.Id, true);
-                            ObjectAttributes attributes = obj.Attributes;
-
-                            attributes.ViewportId = view.ActiveViewportID;
-
-                            doc.Objects.ModifyAttributes(obj.Id, attributes, true);
-                        });
-
 
                         // Calculate the bounding box on the 
                         BoundingBox bbox = alt.zone.GetBoundingBox(false);
@@ -344,16 +350,12 @@ namespace DPredict.ViewModels
 
                         view.ActiveViewport.ZoomBoundingBox(bbox);
                         view.Redraw();
-                        doc.Views.Redraw();
 
                         DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Arctic");
 
                         // Capture the view to a bitmap
                         Bitmap bm = view.CaptureToBitmap(new Size(view.ActiveViewport.Size.Width, view.ActiveViewport.Size.Height), displaymode);
-
-                        string imageBytes = ImageToBase64String(bm);
-
-
+                       
 
                         string savingFolder = UnicornPlugin.Instance.GetDataFolderPath() + subfolder;
                         if (!Directory.Exists(savingFolder))
@@ -369,9 +371,15 @@ namespace DPredict.ViewModels
                         File.WriteAllText(combinedPath + ".json", json);
                         bm.Save(combinedPath + ".png");
 
+                        // restore visibility of non-parametric analysis objects
                         allObjs.ForEach(obj =>
                         {
-                            Rhino.RhinoDoc.ActiveDoc.Objects.Show(obj.Id, true);
+                            if (!objectGuids.Contains(obj.Id))
+                            {
+                                ObjectAttributes attributes = obj.Attributes;
+                                attributes.ViewportId = Guid.Empty;
+                                doc.Objects.ModifyAttributes(obj.Id, attributes, true);
+                            }
                         });
 
                         // Delete clipping plane
@@ -380,15 +388,11 @@ namespace DPredict.ViewModels
                             doc.Objects.Delete(cPlaneGuid, true);
                         }
 
-                        // Close the custom view after capture
-                        view.Close();
-
                         // restore previous view
-                        if (oldView != null)
+                        if (oldView != null && doc.Views.ActiveView != oldView)
                         {
                             doc.NamedViews.Restore(index, oldView.ActiveViewport);
                             oldView.Maximized = oldViewMaximized;
-                            oldView.Redraw();
                         }
                     });
                 }
@@ -1228,7 +1232,7 @@ namespace DPredict.ViewModels
             }
         }
 
-        internal void Clip(Curve curve, Guid viewportGuid, ref Guid clippingPlaneGuid, bool enable, double height = 1)
+        public static void Clip(Curve curve, Guid viewportGuid, ref Guid clippingPlaneGuid, bool enable, double height = 1)
         {
             bool flip = true;
             RhinoDoc doc = RhinoDoc.ActiveDoc;
