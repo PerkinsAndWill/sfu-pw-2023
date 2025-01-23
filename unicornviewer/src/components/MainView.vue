@@ -3021,7 +3021,7 @@
           padding: 6px;
       }
 
-      > > > .comparision_radio_group .v-input--radio-group__input {
+      >>> .comparision_radio_group .v-input--radio-group__input {
           display: flex;
           flex-direction: row;
           flex-wrap: wrap;
@@ -3041,7 +3041,12 @@
       }
 
       .panels_container
-      .wwr_inputs_container > .row > .col > .walls_checkboxes > .v-input__control > div.v-input__slot {
+      .wwr_inputs_container 
+      > .row 
+      > .col 
+      > .walls_checkboxes 
+      > .v-input__control 
+      > div.v-input__slot {
           margin: 0;
       }
 
@@ -3067,7 +3072,7 @@
           margin: 5px;
       }
 
-      > > > .paramAnalysisDefaultRadioGroup .v-label {
+      >>> .paramAnalysisDefaultRadioGroup .v-label {
           font-size: small;
       }
 </style>
