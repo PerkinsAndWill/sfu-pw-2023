@@ -2086,6 +2086,7 @@
             window.recieveData = this.recieveData;
             window.recieveDataTrees = this.recieveDataTrees;
             window.updateUIData = this.updateUIData;
+            window.setInputData = this.setInputData;
             window.updateParametricAnalysisModels = this.updateParametricAnalysisModels;
             window.updateMaxRegression = this.updateMaxRegression;
             window.setInputsData = this.setInputsData;
@@ -2415,6 +2416,9 @@
                             this.inputs["overhangs_offset"][lastWallNum];
                         this.overhangsDepthInput =
                             this.inputs["overhangs_depth"][lastWallNum];
+                        this.enable_overhangs = Boolean(this.inputs["overhangsOnOff"][lastWallNum]);
+                        this.enable_shading = this.inputs["verticalFnOnOff"][lastWallNum] + this.inputs["horizontalFnOnOff"][lastWallNum] > 0;
+                        this.shadingDeviceType = Boolean(this.inputs["horizontalFnOnOff"][lastWallNum]) ? "Horizontal" : "Vertical";
 
                         console.log(
                             "done setting",
@@ -2818,8 +2822,12 @@
                 this.parametricAnalysisModelsSlopes[param] = slopes;
                 this.parametricAnalysisModelsIntercepts[param] = intercepts;
                 this.parametricAnalysisModelsCorrelations[param] = correlations;
-
-                this.updateMaxParametricAnalysisRegression();
+                try {
+                    this.updateMaxParametricAnalysisRegression();
+                }
+                catch (err) {
+                    console.log(err);
+                }
             },
 
             updateMaxParametricAnalysisRegression() {
@@ -2904,6 +2912,10 @@
             updateUIData(key, value) {
                 console.log("Updating", key, value);
                 this[key] = value;
+            },
+            setInputData(inputKey, value) {
+                console.log("setting", inputKey, value);
+                this.inputs[inputKey] = value;
             },
 
             /**
