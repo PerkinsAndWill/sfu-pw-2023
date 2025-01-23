@@ -84,6 +84,11 @@ namespace DPredict
             Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("updateUIData(\"" + key + "\" , " + JsonConvert.SerializeObject(value) + ")");
         }
 
+        public void UpdateUIInputData(string dataKey, object value)
+        {
+            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("setInputData(\"" + dataKey + "\" , " + JsonConvert.SerializeObject(value) + ")");
+        }
+
         internal void UpdateParametricAnalysisModels(string paramName, List<double> slopes, List<double> intercepts, List<double> correlations)
         {
             string str = "updateParametricAnalysisModels(\"" + paramName + "\" , " + JsonConvert.SerializeObject(slopes) + "," + JsonConvert.SerializeObject(intercepts) + "," + JsonConvert.SerializeObject(correlations) + ")";
@@ -146,7 +151,10 @@ namespace DPredict
             Browser.EvaluateScriptAsync("log(" + JsonConvert.SerializeObject(payload) + ")");
         }
 
-
+        public void ConsoleLog(object message)
+        {
+            Browser.EvaluateScriptAsync("console.log(" + JsonConvert.SerializeObject(message) + ")");
+        }
 
         public async Task<List<GrasshopperDataTree>> UpdateBackendData(string key, string value, bool silent = false)
         {

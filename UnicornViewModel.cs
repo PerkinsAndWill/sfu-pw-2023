@@ -606,6 +606,8 @@ namespace DPredict.ViewModels
                 {
                     UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
                 }
+                UnicornPlugin.UIInterop.UpdateUIInputData("enable_energy", currentAlternative.data["enable_energy"]);
+                UnicornPlugin.UIInterop.UpdateUIInputData("enable_daylight", currentAlternative.data["enable_daylight"]);
             }
             else
             {
@@ -1494,8 +1496,10 @@ namespace DPredict.ViewModels
 
                             guids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
                             guids.Clear();
-                            doc.Views.Redraw();
-
+                            if (doc.Views.ActiveView != null)
+                            {
+                                doc.Views.Redraw();
+                            }
                         }
 
 
@@ -2470,7 +2474,10 @@ namespace DPredict.ViewModels
                 throw new ArgumentException("Lists must have the same number of elements");
 
             if (count < 2)
-                throw new ArgumentException("Lists must have at least two elements to compute correlation");
+            {
+                UnicornPlugin.UIInterop.ConsoleLog("Lists must have at least two elements to compute correlation");
+                return 0;
+            }
 
             double avg1 = list1.Average();
             double avg2 = list2.Average();
