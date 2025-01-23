@@ -275,6 +275,44 @@ namespace DPredict.ViewModels
             return SaveCustomViewAlt(currentAlternative.currentObjectsGuids, currentAlternative.zone, name, isAutomatedSave);
         }
 
+        private RhinoView parametricanalysisView;
+        internal void InitParametricViewport(object sender, DocumentOpenEventArgs e)
+        {
+            RhinoDoc doc = RhinoDoc.ActiveDoc;
+
+            // Store current view
+            RhinoView oldView = null;
+            Guid oldViewportId = Guid.Empty;
+            int index = -1;
+            bool oldViewMaximized = false;
+            if (doc.Views.ActiveView != null)
+            {
+                oldView = doc.Views.ActiveView;
+                oldViewportId = oldView.ActiveViewportID;
+                index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldViewportId);
+                oldViewMaximized = oldView.Maximized;
+            }
+
+            // Create and set up a new view
+            parametricanalysisView = doc.Views.Find("ParametricAnalysisView", false);
+            if (parametricanalysisView == null)
+            {
+                parametricanalysisView = doc.Views.Add("ParametricAnalysisView", DefinedViewportProjection.Perspective, new Rectangle(-10000, -10000, 800, 600), true);
+            }
+            if (parametricanalysisView == null)
+            {
+                RhinoApp.WriteLine("Failed to create a new view.");
+                return;
+            }
+
+            // restore previous view
+            if (oldView != null)
+            {
+                doc.NamedViews.Restore(index, oldView.ActiveViewport);
+                oldView.Maximized = oldViewMaximized;
+            }
+        }
+
         internal Task SaveObjectsAndImage(List<Guid> objectGuids, Alternative alt, double height, string name, string subfolder, bool moveFar = true)
         {
             return Task.Run(() =>
@@ -308,28 +346,22 @@ namespace DPredict.ViewModels
                         }
 
                         // Create and set up a new view
-                        RhinoView view = doc.Views.Find("ParametricAnalysisView", false);
-                        if (view == null)
-                        {
-                            view = doc.Views.Add("ParametricAnalysisView", DefinedViewportProjection.Perspective, new Rectangle(-10000,-10000, 800, 600), true);
-                        }
-                        if (view == null)
-                        {
-                            RhinoApp.WriteLine("Failed to create a new view.");
-                            return;
-                        }
+                        //RhinoView view = doc.Views.Find("ParametricAnalysisView", false);
+                        //if (view == null)
+                        //{
+                        //    view = doc.Views.Add("ParametricAnalysisView", DefinedViewportProjection.Perspective, new Rectangle(-10000,-10000, 800, 600), true);
+                        //}
+                        //if (view == null)
+                        //{
+                        //    RhinoApp.WriteLine("Failed to create a new view.");
+                        //    return;
+                        //}
                         List<RhinoObject> allObjs = doc.Objects.Where(obj => obj != null).ToList();
 
                         ////Hide everything else so we could capture only our objects
                         allObjs.ForEach(obj =>
                         {
-                            if (objectGuids.Contains(obj.Id)) {
-                                ObjectAttributes attributes = obj.Attributes;
-                                attributes.ViewportId = view.ActiveViewportID;
-                                doc.Objects.ModifyAttributes(obj.Id, attributes, true);
-                            }
-                            else
-                            {
+                            if (!objectGuids.Contains(obj.Id)) {
                                 ObjectAttributes attributes = obj.Attributes;
                                 attributes.ViewportId = oldViewportId;
                                 doc.Objects.ModifyAttributes(obj.Id, attributes, true);
@@ -340,7 +372,7 @@ namespace DPredict.ViewModels
                         BoundingBox bbox = alt.zone.GetBoundingBox(false);
 
                         Guid cPlaneGuid = Guid.Empty;
-                        Clip(alt.zone, view.ActiveViewportID, ref cPlaneGuid, true, height);
+                        Clip(alt.zone, parametricanalysisView.ActiveViewportID, ref cPlaneGuid, true, height);
 
                         const double pad = 0.02;    // A little padding...
                         double dx = (bbox.Max.X - bbox.Min.X) * pad;
@@ -348,13 +380,13 @@ namespace DPredict.ViewModels
                         double dz = (bbox.Max.Z - bbox.Min.Z) * pad;
                         bbox.Inflate(dx, dy, dz);
 
-                        view.ActiveViewport.ZoomBoundingBox(bbox);
-                        view.Redraw();
+                        parametricanalysisView.ActiveViewport.ZoomBoundingBox(bbox);
+                        parametricanalysisView.Redraw();
 
                         DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Arctic");
 
                         // Capture the view to a bitmap
-                        Bitmap bm = view.CaptureToBitmap(new Size(view.ActiveViewport.Size.Width, view.ActiveViewport.Size.Height), displaymode);
+                        Bitmap bm = parametricanalysisView.CaptureToBitmap(new Size(parametricanalysisView.ActiveViewport.Size.Width, parametricanalysisView.ActiveViewport.Size.Height), displaymode);
                        
 
                         string savingFolder = UnicornPlugin.Instance.GetDataFolderPath() + subfolder;
@@ -434,7 +466,11 @@ namespace DPredict.ViewModels
                             oldViewMaximized = oldView.Maximized;
                         }
                         // Create and set up a new view
-                        RhinoView view = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(-800, -600, 800, 600), true);
+                        RhinoView view = doc.Views.Find("CustomView", false);
+                        if (view == null)
+                        {
+                            view = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(-10000, -10000, 800, 600), true);
+                        }
                         if (view == null)
                         {
                             RhinoApp.WriteLine("Failed to create a new view.");
@@ -453,7 +489,6 @@ namespace DPredict.ViewModels
 
                         bool succeeded = view.ActiveViewport.ZoomBoundingBox(bbox);
                         view.Redraw();
-                        doc.Views.Redraw();
 
                         DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Arctic");
 
@@ -491,11 +526,8 @@ namespace DPredict.ViewModels
                             doc.Objects.Delete(cPlaneGuid, true);
                         }
 
-                        // Close the custom view after capture
-                        view.Close();
-
                         // restore previous view
-                        if (oldView != null)
+                        if (oldView != null && doc.Views.ActiveView != oldView)
                         {
                             doc.NamedViews.Restore(index, oldView.ActiveViewport);
                             oldView.Maximized = oldViewMaximized;
@@ -649,6 +681,7 @@ namespace DPredict.ViewModels
             RhinoDoc.DeselectAllObjects += DeselectAllObjects;
             RhinoDoc.DeselectObjects += OnSelectObjects;
             RhinoDoc.EndOpenDocument += InitDoc;
+            RhinoDoc.EndOpenDocumentInitialViewUpdate += InitParametricViewport;
             RhinoApp.Closing += CloseExcelAndDelete;
             Rhino.UI.Panels.Show += OnShowPanel;
 
@@ -1431,6 +1464,7 @@ namespace DPredict.ViewModels
 
                 try
                 {
+                    benchmark.data["isParametric"] = true;
                     List<GrasshopperDataTree> res = await UpdateData(benchmark, "ready", true, false, false, false);
 
                     if (res != null)
@@ -1444,9 +1478,11 @@ namespace DPredict.ViewModels
                         {
                             RhinoDoc doc = RhinoDoc.ActiveDoc;
 
-                            List<Guid> guids = CollectResults(res, ref benchmark, false);
+                            List<Guid> guids = CollectResults(res, ref benchmark, false, parametricanalysisView.ActiveViewportID);
                             // add context guids as duplicate geometry
-                            guids.AddRange(context.Select(geom => doc.Objects.Add(geom.Duplicate())).ToList());
+                            ObjectAttributes attributes = new ObjectAttributes();
+                            attributes.ViewportId = parametricanalysisView.ActiveViewportID;
+                            guids.AddRange(context.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
 
                             SwitchDaylightMesh(0, benchmark).Wait();
 
@@ -1720,7 +1756,12 @@ namespace DPredict.ViewModels
 
             try
             {
-                lastRequestDate = DateTime.Now; 
+                object isParametric;
+                alt.data.TryGetValue("isParametric", out isParametric);
+                if (isParametric == null || !(bool)isParametric)
+                {
+                    lastRequestDate = DateTime.Now;
+                }
                 DateTime thisRequestDate = DateTime.Now;
 
                 result = Rhino.Compute.GrasshopperCompute.EvaluateDefinition(definitionPath, trees);
@@ -1754,7 +1795,7 @@ namespace DPredict.ViewModels
                         layerIndex = resultsLayer.Index;
                     }
 
-                    List<Guid> addedObjectsguids = CollectResults(result, ref alt, true);
+                    List<Guid> addedObjectsguids = CollectResults(result, ref alt, true, Guid.Empty);
 
                     //Setting all the objects created from Rhino Compute as non-selectable and non-changable i.e. locked.
                     addedObjectsguids.ForEach(id =>
@@ -1804,7 +1845,7 @@ namespace DPredict.ViewModels
             return result;
         }
 
-        private List<Guid> CollectResults(List<GrasshopperDataTree> values, ref Alternative alt, bool updateUI)
+        private List<Guid> CollectResults(List<GrasshopperDataTree> values, ref Alternative alt, bool updateUI, Guid viewportId)
         {
             List<Guid> addObjectsGuids = new List<Guid>();
             Dictionary<string, List<CommonObject>> objects = new Dictionary<string, List<CommonObject>>();
@@ -1914,13 +1955,12 @@ namespace DPredict.ViewModels
                                     if (values[i].ParamName.Contains("windows_brep"))
                                     {
                                         Brep window = (Brep)obj;
-
                                         Guid id = doc.Objects.AddBrep(window);
 
                                         RhinoObject ro = doc.Objects.Find(id);
                                         ro.Attributes.ObjectColor = System.Drawing.Color.LightBlue;
                                         ro.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
-
+                                        
                                         Rhino.DocObjects.Material glassMaterial = new Rhino.DocObjects.Material
                                         {
                                             Name = "Glass",
@@ -2030,9 +2070,22 @@ namespace DPredict.ViewModels
 
             }
 
+            foreach (Guid id in addObjectsGuids)
+            {
+                RhinoObject ro = doc.Objects.FindId(id);
+                ro.Attributes.ViewportId = viewportId;
+                ro.CommitChanges();
+            }
 
-
-            doc.Views.Redraw();
+            if (viewportId != Guid.Empty)
+            {
+                RhinoView view = doc.Views.Find(viewportId);
+                if (view != null) view.Redraw();
+            }
+            else
+            {
+                doc.Views.Redraw();
+            }
             if (doc.Objects.Count < 1)
             {
                 Console.WriteLine("No rhino objects to load!");
