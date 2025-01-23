@@ -12,14 +12,14 @@
           alt.data.num === selectedOptionComparison ? 'red 2px solid' : 'none',
       },
     ]"
-    width="300"
+    width="280"
     height="492"
   >
     <div style="display: flex; flex-direction: row; justify-content: ">
-      <v-radio :value="alt.data.num" />
+      <!--<v-radio :value="alt.data.num" />-->
       <span
         v-if="isCurrent"
-        style="display: flex; flex-direction: row"
+        style="display: flex; flex-direction: row; margin-left: 10px;"
       >
         Current
         <span style="display: flex; position: absolute; right: 25px">
@@ -31,6 +31,7 @@
             density="compact"
             hide-details
             variant="outlined"
+            @keydown.enter="(event) => {event.preventDefault(); saveAlt()}"
             clearable
           />
           <v-btn
@@ -51,7 +52,7 @@
             </svg> </v-btn></span>
       </span>
       <span v-else>
-        <span> {{ alt.data.num }}  {{ alt.data.name}} </span>
+        <span style="margin-left: 10px"> {{ alt.data.name}} </span>
         <v-btn
           style="position: absolute; right: 50px"
           :icon="true"
