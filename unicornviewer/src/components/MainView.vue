@@ -554,7 +554,7 @@
                           !enable_shading || shadingDeviceType != 'Vertical'
                         "
                                                       :min="0.1"
-                                                      :max="3"
+                                                      :max="1"
                                                       :step="0.05"
                                                       show-ticks="always"
                                                       tick-size="4"
@@ -603,7 +603,7 @@
                           !enable_shading || shadingDeviceType != 'Horizontal'
                         "
                                                       :min="0.1"
-                                                      :max="3"
+                                                      :max="1"
                                                       :step="0.05"
                                                       show-ticks="always"
                                                       tick-size="4"
