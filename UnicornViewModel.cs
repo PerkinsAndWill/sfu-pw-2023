@@ -220,8 +220,8 @@ namespace DPredict.ViewModels
 
             data["ceiling_reflectance"] = 0.7;
             data["floor_reflectance"] = 0.2;
-            data["wall_reflectance"] = 0.4;
-            data["glazing_transparency"] = 0.3;
+            data["wall_reflectance"] = 0.5;
+            data["glazing_transparency"] = 0.6;
 
             data["grid_size"] = 2;
 
