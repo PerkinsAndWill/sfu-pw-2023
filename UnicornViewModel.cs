@@ -148,7 +148,6 @@ namespace DPredict.ViewModels
         internal List<Brep> currentlySelectedWalls = new List<Brep>();
         internal List<int> wallDirections = new List<int>();
         internal List<Guid> daylightMeshesIds = new List<Guid>();
-        internal string weatherLocation;
         internal int currentDaylightMeshIndex = 0;
 
         public static void Clear(Alternative alt, RhinoDoc doc)
@@ -607,6 +606,22 @@ namespace DPredict.ViewModels
                     UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
                 }
                 UnicornPlugin.UIInterop.UpdateInputsData(currentAlternative.data);
+                try
+                {
+                    IEnumerable<string> lines = File.ReadLines(currentAlternative.data["weather_file"].ToString());
+                    string location = "";
+                    foreach (string line in lines)
+                    {
+                        string[] parts = line.Split(',');
+                        location = parts[1] + ", " + parts[2] + ", " + parts[3];
+                        break;
+                    }
+                    UnicornPlugin.UIInterop.UpdateUIData("weatherFileLocation", location);
+                }
+                catch (Exception ex)
+                {
+                    RhinoApp.WriteLine("Failed loading epw file: {0}", ex.Message);
+                }
             }
             else
             {
@@ -1100,19 +1115,29 @@ namespace DPredict.ViewModels
             dialog.ShowOpenDialog();
 
             string f = dialog.FileName;
-            IEnumerable<string> lines = File.ReadLines(f);
-            string location = "";
-            foreach (string line in lines)
+            if (File.Exists(f))
             {
-                string[] parts = line.Split(',');
-                location = parts[1] + ", " + parts[2] + ", " + parts[3];
-                break;
+                try
+                {
+                    IEnumerable<string> lines = File.ReadLines(f);
+                    string location = "";
+                    foreach (string line in lines)
+                    {
+                        string[] parts = line.Split(',');
+                        location = parts[1] + ", " + parts[2] + ", " + parts[3];
+                        break;
+                    }
+
+                    UnicornPlugin.UIInterop.UpdateUIData("isWeatherFileSet", true);
+                    UnicornPlugin.UIInterop.UpdateUIData("weatherFileLocation", location);
+
+                    UpdateData(currentAlternative, "weather_file", f);
+                }
+                catch (Exception e)
+                {
+                    RhinoApp.WriteLine("Could not open file {0}. {1}", f, e.Message);
+                }
             }
-
-            UnicornPlugin.UIInterop.UpdateUIData("isWeatherFileSet", true);
-            UnicornPlugin.UIInterop.UpdateUIData("weatherFileLocation", location);
-
-            UpdateData(currentAlternative, "weather_file", f);
         }
 
         internal async Task<List<GrasshopperDataTree>> UpdateCurrentAlternative(string key, object newValue, bool silent = false)
@@ -1928,13 +1953,6 @@ namespace DPredict.ViewModels
                                     }
 
                                     daylight_colors[colorsName].Add(GetColorFromString(parsed));
-                                }
-                                else if (values[i].ParamName.Contains("weather_location"))
-                                {
-                                    alt.weatherLocation = JsonConvert.DeserializeObject<string>(v.Data);
-                                    UnicornPlugin.UIInterop.UpdateUIData("weatherLocation", alt.weatherLocation);
-
-                                    Console.WriteLine(alt.weatherLocation);
                                 }
                                 else
                                 {
