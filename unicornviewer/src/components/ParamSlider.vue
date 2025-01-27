@@ -111,7 +111,13 @@
                 model_internal: this.modelValue
             }
         },
-        watch: {},
+        watch: {
+            modelValue: {
+                handler: function (newValue) {
+                    this.model_internal = newValue;
+                }
+            }
+        },
         mounted() {
             window.updateBackendData = this.updateBackendData;
         },

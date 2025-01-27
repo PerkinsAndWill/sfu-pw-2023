@@ -288,7 +288,7 @@
                             <v-expansion-panel-content>
                                 <v-container>
                                     <ParamSlider model-name="wall_r_val"
-                                                 :model-value="inputs.wall_r_val"
+                                                :model-value="inputs.wall_r_val"
                                                  label="Wall R Value [IP]"
                                                  :min="0"
                                                  :max="40"
@@ -1297,8 +1297,8 @@
 
                     ceiling_reflectance: 0.7,
                     floor_reflectance: 0.2,
-                    wall_reflectance: 0.4,
-                    glazing_transparency: 0.3,
+                    wall_reflectance: 0.5,
+                    glazing_transparency: 0.6,
                     grid_size: 2,
                     floor_num: 0,
 
@@ -2086,7 +2086,6 @@
             window.recieveData = this.recieveData;
             window.recieveDataTrees = this.recieveDataTrees;
             window.updateUIData = this.updateUIData;
-            window.setInputData = this.setInputData;
             window.updateParametricAnalysisModels = this.updateParametricAnalysisModels;
             window.updateMaxRegression = this.updateMaxRegression;
             window.setInputsData = this.setInputsData;
@@ -2790,6 +2789,9 @@
                 for (var key in newInputsData) {
                     this.inputs[key] = newInputsData[key];
                 }
+                this.buildingTypeSelected = this.buildingTypeData.filter(item => item.index == newInputsData.building_type)[0];
+                this.terrainSelected = this.terrainData.filter(item => item.index == newInputsData.terrain)[0];
+                this.gridSizeSelected = this.gridSizeData.filter(item => item.index == newInputsData.grid_size)[0];
             },
             async setServerLoaded() {
                 this.showSpinnerSingleRun = false;
@@ -2912,10 +2914,6 @@
             updateUIData(key, value) {
                 console.log("Updating", key, value);
                 this[key] = value;
-            },
-            setInputData(inputKey, value) {
-                console.log("setting", inputKey, value);
-                this.inputs[inputKey] = value;
             },
 
             /**

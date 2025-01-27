@@ -306,7 +306,7 @@ namespace DPredict.ViewModels
             }
 
             // restore previous view
-            if (oldView != null)
+            if (oldView != null && doc.Views.ActiveView != oldView)
             {
                 doc.NamedViews.Restore(index, oldView.ActiveViewport);
                 oldView.Maximized = oldViewMaximized;
@@ -606,8 +606,7 @@ namespace DPredict.ViewModels
                 {
                     UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
                 }
-                UnicornPlugin.UIInterop.UpdateUIInputData("enable_energy", currentAlternative.data["enable_energy"]);
-                UnicornPlugin.UIInterop.UpdateUIInputData("enable_daylight", currentAlternative.data["enable_daylight"]);
+                UnicornPlugin.UIInterop.UpdateInputsData(currentAlternative.data);
             }
             else
             {
@@ -1479,7 +1478,10 @@ namespace DPredict.ViewModels
                         if (takeSreenshot)
                         {
                             RhinoDoc doc = RhinoDoc.ActiveDoc;
-
+                            if (parametricanalysisView == null || parametricanalysisView.ActiveViewport == null)
+                            {
+                                InitParametricViewport(null, (DocumentOpenEventArgs)DocumentOpenEventArgs.Empty);
+                            }
                             List<Guid> guids = CollectResults(res, ref benchmark, false, parametricanalysisView.ActiveViewportID);
                             // add context guids as duplicate geometry
                             ObjectAttributes attributes = new ObjectAttributes();
@@ -1669,7 +1671,7 @@ namespace DPredict.ViewModels
             if (loadToRhino)
                 UnicornPlugin.UIInterop.ShowUILoaderAsync(true);
 
-            ComputeServer.WebAddress = "http://localhost:5000"; // port 5000 is rhino.compute, 8081 is compute.geometry
+            ComputeServer.WebAddress = "http://localhost:8081"; // port 5000 is rhino.compute, 8081 is compute.geometry
                                                                  //ComputeServer.ApiKey = "";
 
             string definitionName = "ParametricRoom_Latest.gh";
@@ -2074,15 +2076,15 @@ namespace DPredict.ViewModels
 
             }
 
-            foreach (Guid id in addObjectsGuids)
-            {
-                RhinoObject ro = doc.Objects.FindId(id);
-                ro.Attributes.ViewportId = viewportId;
-                ro.CommitChanges();
-            }
-
             if (viewportId != Guid.Empty)
             {
+                foreach (Guid id in addObjectsGuids)
+                {
+                    RhinoObject ro = doc.Objects.FindId(id);
+                    ro.Attributes.ViewportId = viewportId;
+                    ro.CommitChanges();
+                }
+
                 RhinoView view = doc.Views.Find(viewportId);
                 if (view != null) view.Redraw();
             }
