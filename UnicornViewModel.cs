@@ -947,7 +947,10 @@ namespace DPredict.ViewModels
                     }
                     else if (result == GetResult.Nothing)
                     {
-                        RhinoApp.WriteLine("Selection was canceled.");
+                        Alternative.Clear(currentAlternative, RhinoDoc.ActiveDoc);
+                        RhinoDoc.ActiveDoc.Views.Redraw();
+                        UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", false);
+                        UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
                     }
                     else
                     {
