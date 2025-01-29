@@ -27,6 +27,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using Rhino.Render.ChangeQueue;
 using System.Xml.Linq;
+using CefSharp.Handler;
 
 namespace DPredict.ViewModels
 {
@@ -444,7 +445,7 @@ namespace DPredict.ViewModels
             });
         }
 
-
+        RhinoView userView = null;
         internal Task SaveCustomViewAlt(List<Guid> objectGuids, Curve zone, string name, bool isAutomatedSave = false)
         {
             return Task.Run(() =>
@@ -466,13 +467,13 @@ namespace DPredict.ViewModels
                         BoundingBox bbox = zone.GetBoundingBox(false);
 
                         // Store current view
-                        RhinoView oldView = null;
                         int index = -1;
                         bool oldViewMaximized = false;
-                        if (doc.Views.ActiveView != null) {
-                            oldView = doc.Views.ActiveView;
-                            index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldView.ActiveViewportID);
-                            oldViewMaximized = oldView.Maximized;
+                        if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
+                            doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView") {
+                            userView = doc.Views.ActiveView;
+                            index = doc.NamedViews.Add(userView.ActiveViewport.Name, userView.ActiveViewportID);
+                            oldViewMaximized = userView.Maximized;
                         }
                         // Create and set up a new view
                         RhinoView view = doc.Views.Find("CustomView", false);
@@ -536,11 +537,11 @@ namespace DPredict.ViewModels
                         }
 
                         // restore previous view
-                        if (oldView != null && doc.Views.ActiveView != oldView)
+                        if (userView != null && doc.Views.ActiveView != userView)
                         {
-                            doc.NamedViews.Restore(index, oldView.ActiveViewport);
-                            oldView.Maximized = oldViewMaximized;
-                            oldView.Redraw();
+                            doc.NamedViews.Restore(index, userView.ActiveViewport);
+                            userView.Maximized = oldViewMaximized;
+                            userView.Redraw();
                         }
 
                         UnicornPlugin.UIInterop.UpdateAlts();
@@ -1376,8 +1377,12 @@ namespace DPredict.ViewModels
         internal void Clip(bool enable)
         {
             RhinoDoc doc = RhinoDoc.ActiveDoc;
-            RhinoView view = doc.Views.ActiveView;
-            Guid viewportGuid = (view != null ? view : doc.Views.GetViewList(true, false)[0]).ActiveViewportID;
+            if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
+                            doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
+            {
+                userView = doc.Views.ActiveView;
+            }
+                Guid viewportGuid = (userView != null ? userView : doc.Views.GetViewList(true, false)[0]).ActiveViewportID;
             ClipInViewport(enable, viewportGuid, ref mainViewClippingPlaneGuid);
         }
 
