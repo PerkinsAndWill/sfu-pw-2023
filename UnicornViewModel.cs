@@ -150,6 +150,12 @@ namespace DPredict.ViewModels
         internal List<Guid> daylightMeshesIds = new List<Guid>();
         internal int currentDaylightMeshIndex = 0;
 
+        [JsonProperty]
+        internal List<Guid> additionalBuildingGeometryGuids = new List<Guid>();
+
+        [JsonProperty]
+        internal List<Brep> additionalBuildingGeometry = new List<Brep>();
+
         public static void Clear(Alternative alt, RhinoDoc doc)
         {
             // clear zone
@@ -168,6 +174,10 @@ namespace DPredict.ViewModels
             // clear other geometries
             alt.currentObjectsGuids.ForEach(guid => doc.Objects.Delete(guid, true));
             alt.currentObjectsGuids = new List<Guid>();
+
+            alt.additionalBuildingGeometryGuids.ForEach(guid => doc.Objects.Delete(guid, true));
+            alt.additionalBuildingGeometryGuids = new List<Guid>();
+            alt.additionalBuildingGeometry = new List<Brep>();
 
             // clear heatmaps
             alt.daylightMeshesIds.ForEach(guid => doc.Objects.Delete(guid, true));
@@ -574,6 +584,14 @@ namespace DPredict.ViewModels
                     currentAlternative.interiorWallsGuids.Add(RhinoDoc.ActiveDoc.Objects.Add(iw));
                 });
 
+                for (int i = 0; i < currentAlternative.additionalBuildingGeometry.Count; ++i)
+                {
+                    if (RhinoDoc.ActiveDoc.Objects.FindId(currentAlternative.additionalBuildingGeometryGuids[i]) == null)
+                    {
+                        currentAlternative.additionalBuildingGeometryGuids[i] = RhinoDoc.ActiveDoc.Objects.Add(currentAlternative.additionalBuildingGeometry[i]);
+                    }
+                }
+
                 Curve geometry = alternative.zone;
                 //To set an initial wwrPerWall value
                 double[] wwrPerWall = ((JArray)alternative.data["WWR_per_wall"]).ToObject<double[]>();
@@ -604,6 +622,14 @@ namespace DPredict.ViewModels
                 else
                 {
                     UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
+                }
+                if (alternative.additionalBuildingGeometry != null && alternative.additionalBuildingGeometry.Count > 0)
+                {
+                    UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", true);
+                }
+                else
+                {
+                    UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", false);
                 }
                 UnicornPlugin.UIInterop.UpdateInputsData(currentAlternative.data);
                 try
@@ -721,6 +747,11 @@ namespace DPredict.ViewModels
                 SetInteriorWalls(iws);
             };
 
+            BuildingGeometrySet += (bgeom) =>
+            {
+                SetBuildingGeometry(bgeom);
+            };
+
             InitDataOnView();
 
             InitEpcSpreadsheet();
@@ -824,6 +855,15 @@ namespace DPredict.ViewModels
             });
         }
 
+        internal void SetBuildingGeometry(List<GeometryBase> geometries)
+        {
+            Task.Run(async () =>
+            {
+                await UpdateData(currentAlternative, "building_geometry", geometries);
+                UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", geometries.Count > 0);
+            });
+        }
+
         internal void SetZone(Curve geometry, bool fresh = true)
         {
             Task.Run(async () =>
@@ -908,6 +948,10 @@ namespace DPredict.ViewModels
         public delegate void InteriorWallsSetHandler(List<GeometryBase> geoms);
 
         public static event InteriorWallsSetHandler InteriorWallsSet;
+
+        public delegate void BuildingGeometrysetHandler(List<GeometryBase> bgeom);
+
+        public static event BuildingGeometrysetHandler BuildingGeometrySet;
 
         internal Result SetZone()
         {
@@ -1088,6 +1132,64 @@ namespace DPredict.ViewModels
             }
 
         }
+
+        internal Result SetBuildingGeometry()
+        {
+            try
+            {
+                // We run the entire selection process on the UI thread without Task.Run.
+                RhinoApp.InvokeOnUiThread((Action)delegate
+                {
+                    GetObject getter = new GetObject();
+                    getter.AcceptNothing(true);
+                    getter.GeometryFilter = ObjectType.Extrusion | ObjectType.Surface | ObjectType.Brep;
+                    getter.AcceptEnterWhenDone(true);
+                    getter.EnablePreSelect(true, true);
+                    getter.EnablePostSelect(true);
+                    getter.SetCommandPrompt("Select the additional building geometry");
+
+                    // Run the object selection process
+                    GetResult result = getter.GetMultiple(0, 999);
+
+
+                    if (result == GetResult.Object)
+                    {
+                        // Selection succeeded
+
+                        Rhino.DocObjects.ObjRef[] objsRef = getter.Objects();
+                        if (objsRef.Length > 0)
+                        {
+                            currentAlternative.additionalBuildingGeometryGuids = objsRef.Select(oref => oref.ObjectId).ToList();
+
+                            // Access the selected object's geometry
+                            List<GeometryBase> geometries = new List<GeometryBase>();
+                            foreach (ObjRef oRef in objsRef)
+                            {
+                                geometries.Add(oRef.Object().Geometry);
+                            }
+                            BuildingGeometrySet(geometries);
+                        }
+                    }
+                    else if (result == GetResult.Nothing)
+                    {
+                        BuildingGeometrySet(new List<GeometryBase>());
+                        RhinoApp.WriteLine("No additional building geometries were selected.");
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine("Selection failed.");
+                    }
+                });
+
+                return Result.Success;
+            }
+            catch (Exception ex)
+            {
+                RhinoApp.WriteLine($"An error occurred: {ex.Message}");
+                return Result.Failure;
+            }
+
+        }
         internal void SetInteriorWalls2()
         {
             // do something
@@ -1168,6 +1270,10 @@ namespace DPredict.ViewModels
             else if (key == "interior_walls")
             {
                 alt.interiorWalls = ((IEnumerable)newValue).Cast<Curve>().ToList();
+            }
+            else if (key == "building_geometry")
+            {
+                alt.additionalBuildingGeometry = ((IEnumerable)newValue).Cast<GeometryBase>().ToList().Select(geo => Brep.TryConvertBrep(geo)).ToList();
             }
             else
             {
@@ -1781,6 +1887,13 @@ namespace DPredict.ViewModels
 
             }
 
+            if (alt.additionalBuildingGeometry != null && alt.additionalBuildingGeometry.Count > 0)
+            {
+                GrasshopperDataTree param1 = new GrasshopperDataTree("additional_building_geometry");
+                param1.Add("0", alt.additionalBuildingGeometry.Select(c => new GrasshopperObject(c)).ToList());
+                trees.Add(param1);
+            }
+
             {
                 GrasshopperDataTree param1 = new GrasshopperDataTree("epcSpreadsheet");
                 List<GrasshopperObject> lst = new List<GrasshopperObject>() { new GrasshopperObject(epcSpreadsheet) };
@@ -2159,6 +2272,7 @@ namespace DPredict.ViewModels
                         {
                             UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
                         }
+                        return;
                     }
 
                     int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
@@ -2170,6 +2284,19 @@ namespace DPredict.ViewModels
                         {
                             UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
                         }
+                        return;
+                    }
+
+                    int indexOfBuildingGeomPart = currentAlternative.additionalBuildingGeometryGuids.IndexOf(e.ObjectId);
+                    if (indexOfBuildingGeomPart >= 0)
+                    {
+                        currentAlternative.additionalBuildingGeometry.RemoveAt(indexOfBuildingGeomPart);
+                        UpdateData(currentAlternative, "building_geometry", currentAlternative.additionalBuildingGeometry);
+                        if (context.Count == 0)
+                        {
+                            UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", false);
+                        }
+                        return;
                     }
                 }
             }
@@ -2202,20 +2329,33 @@ namespace DPredict.ViewModels
                         currentAlternative.interiorWalls[indexOfWall] = (Curve)e.RhinoObject.Geometry;
                         UpdateData(currentAlternative, "interior_walls", currentAlternative.interiorWalls);
                     }
+                    return;
                 }
-                else
+
+                int indexOfContextPart = contextGuids.IndexOf(e.RhinoObject.Id);
+                if (indexOfContextPart >= 0)
                 {
-                    int indexOfContextPart = contextGuids.IndexOf(e.RhinoObject.Id);
-                    if (indexOfContextPart >= 0)
+                    RhinoObject obj = RhinoDoc.ActiveDoc.Objects.Find(e.RhinoObject.Id);
+                    bool flag = !GeometryBase.GeometryEquals(e.RhinoObject.Geometry, obj.Geometry);
+                    if (flag)
                     {
-                        RhinoObject obj = RhinoDoc.ActiveDoc.Objects.Find(e.RhinoObject.Id);
-                        bool flag = !GeometryBase.GeometryEquals(e.RhinoObject.Geometry, obj.Geometry);
-                        if (flag)
-                        {
-                            context[indexOfContextPart] = e.RhinoObject.Geometry;
-                            UpdateData(currentAlternative, "context", context);
-                        }
+                        context[indexOfContextPart] = e.RhinoObject.Geometry;
+                        UpdateData(currentAlternative, "context", context);
                     }
+                    return;
+                }
+
+                int indexOfWBuildingGeom = currentAlternative.additionalBuildingGeometryGuids.IndexOf(e.RhinoObject.Id);
+                if (indexOfWBuildingGeom >= 0)
+                {
+                    RhinoObject obj = RhinoDoc.ActiveDoc.Objects.Find(e.RhinoObject.Id);
+                    bool flag = !GeometryBase.GeometryEquals(e.RhinoObject.Geometry, obj.Geometry);
+                    if (flag)
+                    {
+                        currentAlternative.additionalBuildingGeometry[indexOfWBuildingGeom] = (Brep)e.RhinoObject.Geometry;
+                        UpdateData(currentAlternative, "building_geometry", currentAlternative.additionalBuildingGeometry);
+                    }
+                    return;
                 }
             }
         }
@@ -2357,16 +2497,25 @@ namespace DPredict.ViewModels
                     replacedObjectGuids.Add(e.ObjectId);
                     currentAlternative.interiorWalls[indexOfWall] = (Curve)e.NewRhinoObject.Geometry;
                     UpdateData(currentAlternative, "interior_walls", currentAlternative.interiorWalls);
+                    return;
                 }
-                else
+
+                int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
+                if (indexOfContextPart >= 0)
                 {
-                    int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
-                    if (indexOfContextPart >= 0)
-                    {
-                        replacedObjectGuids.Add(e.ObjectId);
-                        context[indexOfContextPart] = e.NewRhinoObject.Geometry;
-                        UpdateData(currentAlternative, "context", context);
-                    }
+                    replacedObjectGuids.Add(e.ObjectId);
+                    context[indexOfContextPart] = e.NewRhinoObject.Geometry;
+                    UpdateData(currentAlternative, "context", context);
+                    return;
+                }
+
+                int indexOfBuildingGeom = currentAlternative.additionalBuildingGeometryGuids.IndexOf(e.ObjectId);
+                if (indexOfBuildingGeom >= 0)
+                {
+                    replacedObjectGuids.Add(e.ObjectId);
+                    currentAlternative.additionalBuildingGeometry[indexOfContextPart] = (Brep)e.NewRhinoObject.Geometry;
+                    UpdateData(currentAlternative, "building_geometry", currentAlternative.additionalBuildingGeometry);
+                    return;
                 }
             }
         }

@@ -230,6 +230,11 @@ namespace DPredict
             ViewModel.SetInteriorWalls();
         }
 
+        public void SetBuildingGeometry()
+        {
+            ViewModel.SetBuildingGeometry();
+        }
+
         public void SetWeatherFile()
         {
             ViewModel.SetWeatherFile();

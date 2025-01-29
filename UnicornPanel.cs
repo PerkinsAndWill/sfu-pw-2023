@@ -29,9 +29,15 @@ namespace DPredict
         /// </summary>
         public UnicornPanel()
         {
-            InitializeComponent();
-            InitializeCef();
-            InitializeChromium();
+            try
+            {
+                InitializeComponent();
+                InitializeCef();
+                InitializeChromium();
+            }
+            catch (Exception e) {
+                Debug.WriteLine("\nUnicornPanel Init processes threw an error: {0}\n", e.Message);
+            }
 
             UnicornPlugin.UnicornInterop = new UnicornInterop();
             UnicornPlugin.UIInterop = new UIInterop(Browser, UnicornPlugin.UnicornInterop);
@@ -39,6 +45,9 @@ namespace DPredict
 
             if (!Browser.JavascriptObjectRepository.IsBound("Interop"))
             {
+#if DEBUG
+                Debug.WriteLine("Attempting to register interop");
+#endif
                 Browser.JavascriptObjectRepository.Register("Interop", UnicornPlugin.UIInterop, isAsync: true, options: BindingOptions.DefaultBinder);
             }
 

@@ -125,6 +125,31 @@
                             </template>
                             <span> The interior walls.</span>
                         </v-tooltip>
+                        <v-tooltip bottom>
+                            <template #activator="{ on, attrs }">
+                                <v-btn class="text-none"
+                                       v-bind="attrs"
+                                       :style="[
+                    isBuildingGeometrySet
+                      ? { 'background-color': 'white' }
+                      : { 'background-color': 'lightgray' },
+                  ]"
+                                       v-on="on"
+                                       @click="setBuildingGeometry">
+                                    <svg v-show="isBuildingGeometrySet"
+                                         width="25px"
+                                         style="fill: green; margin-right: 10px"
+                                         xmlns="http://www.w3.org/2000/svg"
+                                         viewBox="0 0 24 24">
+                                        <title>check-outline</title>
+                                        <path d="M19.78,2.2L24,6.42L8.44,22L0,13.55L4.22,9.33L8.44,13.55L19.78,2.2M19.78,5L8.44,16.36L4.22,12.19L2.81,13.55L8.44,19.17L21.19,6.42L19.78,5Z" />
+                                    </svg>
+
+                                    Building Geometry
+                                </v-btn>
+                            </template>
+                            <span> Any geometry of the building not captured in 'Zone' or 'Interior Walls' that may affect daylight, such as self-shading from setbacks.</span>
+                        </v-tooltip>
                     </v-container>
 
                     <v-expansion-panels v-model="setup_tab_expansion"
@@ -1490,6 +1515,7 @@
                 isContextSet: false,
                 isZoneSet: false,
                 isInteriorWallsSet: false,
+                isBuildingGeometrySet: false,
                 isWeatherFileSet: true,
                 weatherFileLocation: "Vancouver.Harbour.CS, BC, CAN",
                 numWalls: 4,
@@ -2639,6 +2665,12 @@
                 console.log("Set InteriorWalls");
                 if (window.Interop) {
                     window.Interop.setInteriorWalls();
+                }
+            },
+            setBuildingGeometry() {
+                console.log("Set BuildingGeometry");
+                if (window.Interop) {
+                    window.Interop.setBuildingGeometry();
                 }
             },
             setWeatherFile() {
