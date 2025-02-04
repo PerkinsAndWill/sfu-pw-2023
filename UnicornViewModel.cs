@@ -1394,7 +1394,7 @@ namespace DPredict.ViewModels
                 double height = 3.2;
                 if (currentAlternative.data["floor_to_floor"] is double)
                 {
-                    height = (double)currentAlternative.data["floor_to_floor"] + 1e-3;
+                    height = (double)currentAlternative.data["floor_to_floor"];
                 }
                 else
                 {
