@@ -1,0 +1,8 @@
+name: DPredict
+version: 1.5.0-alpha
+authors:
+    - Perkins&Will
+    - SFU
+desctiption: >
+    DPredict is a tool for guiding early design decisions
+    based on rapid performance feedback and analysis.

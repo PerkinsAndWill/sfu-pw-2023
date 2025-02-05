@@ -28,6 +28,7 @@ using System.Windows;
 using Rhino.Render.ChangeQueue;
 using System.Xml.Linq;
 using CefSharp.Handler;
+using System.Reflection;
 
 namespace DPredict.ViewModels
 {
@@ -247,6 +248,11 @@ namespace DPredict.ViewModels
 
             data["enable_energy"] = false;
             data["enable_daylight"] = true;
+
+#if !DEBUG
+            data["weather_file"] = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), 
+                                    "resources", "CAN_BC_Vancouver.Harbour.CS.712010_TMYx.2004-2018.epw");
+#endif
         }
     }
 
@@ -371,7 +377,8 @@ namespace DPredict.ViewModels
                         ////Hide everything else so we could capture only our objects
                         allObjs.ForEach(obj =>
                         {
-                            if (!objectGuids.Contains(obj.Id)) {
+                            if (!objectGuids.Contains(obj.Id))
+                            {
                                 ObjectAttributes attributes = obj.Attributes;
                                 attributes.ViewportId = oldViewportId;
                                 doc.Objects.ModifyAttributes(obj.Id, attributes, true);
@@ -397,7 +404,7 @@ namespace DPredict.ViewModels
 
                         // Capture the view to a bitmap
                         Bitmap bm = parametricanalysisView.CaptureToBitmap(new Size(parametricanalysisView.ActiveViewport.Size.Width, parametricanalysisView.ActiveViewport.Size.Height), displaymode);
-                       
+
 
                         string savingFolder = UnicornPlugin.Instance.GetDataFolderPath() + subfolder;
                         if (!Directory.Exists(savingFolder))
@@ -470,7 +477,8 @@ namespace DPredict.ViewModels
                         int index = -1;
                         bool oldViewMaximized = false;
                         if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
-                            doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView") {
+                            doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
+                        {
                             userView = doc.Views.ActiveView;
                             index = doc.NamedViews.Add(userView.ActiveViewport.Name, userView.ActiveViewportID);
                             oldViewMaximized = userView.Maximized;
@@ -532,7 +540,8 @@ namespace DPredict.ViewModels
                         currentAlternative.data["name"] = "";
 
                         // Delete clipping plane of custom view
-                        if (cPlaneGuid != Guid.Empty) {
+                        if (cPlaneGuid != Guid.Empty)
+                        {
                             doc.Objects.Delete(cPlaneGuid, true);
                         }
 
@@ -617,7 +626,8 @@ namespace DPredict.ViewModels
                 await UpdateData(currentAlternative, "interior_walls", alternative.interiorWalls, true);
                 await UpdateData(currentAlternative, "zone", geometry);
                 UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", true);
-                if (alternative.interiorWalls != null && alternative.interiorWalls.Count > 0) {
+                if (alternative.interiorWalls != null && alternative.interiorWalls.Count > 0)
+                {
                     UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", true);
                 }
                 else
@@ -762,14 +772,23 @@ namespace DPredict.ViewModels
         private void InitEpcSpreadsheet()
         {
             // create copy of EPC excel spreadsheet and store filename
-            string originalExcelPath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), "Grasshopper", "Libraries", "DPredict", "Daylight", "EPC_PW_1.0.xlsx");
-            string excelPath = Path.Combine(Path.GetTempPath(), String.Format("EPC_PW_1.0_{0}.xlsx", Guid.NewGuid()));
-            File.Copy(originalExcelPath, excelPath);
-            if (!File.Exists(excelPath))
+            string originalExcelPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "resources", "EPC_PW_1.0.xlsx");
+            if (File.Exists(originalExcelPath))
             {
-                Console.WriteLine("Could not create a copy of the epc file.");
+                string tempDir = Path.Combine(Path.GetDirectoryName(UnicornPlugin.Instance.GetDataFolderPath()), "tmp");
+                Directory.CreateDirectory(tempDir);
+                string excelPath = Path.Combine(tempDir, String.Format("EPC_PW_1.0_{0}.xlsx", Guid.NewGuid()));
+                File.Copy(originalExcelPath, excelPath);
+                if (!File.Exists(excelPath))
+                {
+                    Console.WriteLine("Could not create a copy of the epc file.");
+                }
+                epcSpreadsheet = excelPath;
             }
-            epcSpreadsheet = excelPath;
+            else
+            {
+                Console.WriteLine(String.Format("File not found: {0}", originalExcelPath));
+            }
         }
 
         private void CloseExcelAndDelete(object sender, EventArgs e)
@@ -847,7 +866,7 @@ namespace DPredict.ViewModels
             });
         }
 
-        internal  void SetInteriorWalls(List<GeometryBase> geometries)
+        internal void SetInteriorWalls(List<GeometryBase> geometries)
         {
             Task.Run(async () =>
             {
@@ -896,10 +915,10 @@ namespace DPredict.ViewModels
                     Console.WriteLine("errr");
                 }
 
-                if (fresh || (!fresh && !(numSegments == wwrPerWall.Length && numSegments == vShadingCountsPerWall.Length && 
-                    numSegments == vShadingDepthsPerWall.Length && numSegments == hShadingCountsPerWall.Length && 
-                    numSegments == hShadingDepthsPerWall.Length && numSegments == overhangsOffsetPerWall.Length && 
-                    numSegments == overhangsDepthsPerWall.Length && numSegments == overhangsOnOff.Length && 
+                if (fresh || (!fresh && !(numSegments == wwrPerWall.Length && numSegments == vShadingCountsPerWall.Length &&
+                    numSegments == vShadingDepthsPerWall.Length && numSegments == hShadingCountsPerWall.Length &&
+                    numSegments == hShadingDepthsPerWall.Length && numSegments == overhangsOffsetPerWall.Length &&
+                    numSegments == overhangsDepthsPerWall.Length && numSegments == overhangsOnOff.Length &&
                     numSegments == horizontalFnOnOff.Length && numSegments == verticalFnOnOff.Length)))
                 {
                     wwrPerWall = Enumerable.Repeat(0.3, numSegments).ToArray();
@@ -1297,13 +1316,13 @@ namespace DPredict.ViewModels
         internal void VisualizeAnalysis(string analysisName)
         {
             // Run the server in a separate thread
-            if(!DataLoadServer.isServerRunning)
+            if (!DataLoadServer.isServerRunning)
             {
                 Task serverTask = Task.Run(() => DataLoadServer.StartServer());
             }
-          
+
             //load csv data
-            string analysisFile = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder + "\\" +analysisName + "\\data.csv";
+            string analysisFile = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder + "\\" + analysisName + "\\data.csv";
             var csv = File.ReadAllText(analysisFile);
 
             VisualizeCorrelationsCSV(csv);
@@ -1382,7 +1401,7 @@ namespace DPredict.ViewModels
             {
                 userView = doc.Views.ActiveView;
             }
-                Guid viewportGuid = (userView != null ? userView : doc.Views.GetViewList(true, false)[0]).ActiveViewportID;
+            Guid viewportGuid = (userView != null ? userView : doc.Views.GetViewList(true, false)[0]).ActiveViewportID;
             ClipInViewport(enable, viewportGuid, ref mainViewClippingPlaneGuid);
         }
 
@@ -1429,7 +1448,7 @@ namespace DPredict.ViewModels
                 center += Rhino.Geometry.Vector3d.ZAxis * height;
             }
             clippingPlaneGuid = Guid.Empty;
-            
+
 
             if (curve != null && enable)
             {
@@ -1476,7 +1495,7 @@ namespace DPredict.ViewModels
             UnicornPlugin.UIInterop.UpdateParametricAnalysisProgress(0, samples.Count, false);
 
             List<string> altNames = new List<string>();
-            string analysisSubfolder = parametricAnalysisFolder + "/"  + DateTime.Now.Year + "-" + DateTime.Now.Month + "-" + DateTime.Now.Day + "_" + DateTime.Now.Hour + "." + DateTime.Now.Minute;
+            string analysisSubfolder = parametricAnalysisFolder + "/" + DateTime.Now.Year + "-" + DateTime.Now.Month + "-" + DateTime.Now.Day + "_" + DateTime.Now.Hour + "." + DateTime.Now.Minute;
 
             string parentAnalysisFolder = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder;
             if (!Directory.Exists(parentAnalysisFolder))
@@ -1668,7 +1687,7 @@ namespace DPredict.ViewModels
                     RhinoApp.Write(String.Format("{0}\n{1}", e.Message, e.StackTrace));
                 }
 
-                
+
                 num++;
                 int progressPerc = (int)(((num * 1.0) / samples.Count) * 100);
 
@@ -1697,7 +1716,7 @@ namespace DPredict.ViewModels
             var dataRows = lines.Skip(1).Select(line => line.Split(',').Select(value => value.Trim()).ToList()).ToList();
 
             // Separate parameter names and output names
-            
+
             int paramCount = headers.IndexOf(headers.First(h => h.Contains("out:")));  // Assumes "output1" marks the start of output columns
             var paramNames = headers.Take(paramCount).ToList();
             var outputNames = headers.Skip(paramCount).ToList();
@@ -1724,20 +1743,20 @@ namespace DPredict.ViewModels
                     {
                         outputs.Add(double.Parse(output));
                     }
-                    
+
                 }
                 allOutputs.Add(outputs);
 
                 // Add output values for this row
                 //var outputs = row.Skip(paramCount).Select(double.Parse).ToList();
-               
+
             }
 
             // Call the function with the prepared inputs
             ComputeThenVisualizeCorrelations(paramNames, samples, allOutputs, null);
         }
 
-        private void ComputeThenVisualizeCorrelations(List<string> paramNames, List<Dictionary<string, string>> samples, 
+        private void ComputeThenVisualizeCorrelations(List<string> paramNames, List<Dictionary<string, string>> samples,
             List<List<double>> allOutputs, Dictionary<string, int> focusDict)
         {
             //------------- calculating and sending correlation results to front-end -------
@@ -1770,7 +1789,7 @@ namespace DPredict.ViewModels
                     {
                         focus = (focusDict[k] == 0) || (focusDict[k] == 1 && i >= 4) || (focusDict[k] == 2 && i < 4) ? 1 : 0;
                     }
-                    
+
                     slopes.Add(slope * focus);
                     intercepts.Add(yIntercept * focus);
                     correlations.Add(correlation * focus);
@@ -1811,30 +1830,19 @@ namespace DPredict.ViewModels
                 UnicornPlugin.UIInterop.ShowUILoaderAsync(true);
 
             ComputeServer.WebAddress = "http://localhost:8081"; // port 5000 is rhino.compute, 8081 is compute.geometry
-                                                                 //ComputeServer.ApiKey = "";
+                                                                //ComputeServer.ApiKey = "";
 
             string definitionName = "ParametricRoom_Latest.gh";
-            string definitionPath = "";
 
             string p = "";
-#if !DEBUG
-               
-                if (System.Environment.OSVersion.Platform == PlatformID.Win32NT)
-                {
-                    // Get the AppData folder path on Windows
-                    string appDataPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
-                    string grasshopperLibrariesPath = Path.Combine(appDataPath, "Grasshopper", "Libraries", "DPredict");
-
-                    p = grasshopperLibrariesPath;
-                }
-#else
             var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+#if !DEBUG
+            p = Path.Combine(Directory.GetParent(assembly.Location).FullName, "resources");
+#else
             p = Path.Combine(Directory.GetParent(assembly.Location).FullName, "Definitions");
 #endif
-            definitionPath = p;
 
-
-            definitionPath = Path.Combine(definitionPath, definitionName);
+            string definitionPath = Path.Combine(p, definitionName);
 
             List<GrasshopperDataTree> trees = new List<GrasshopperDataTree>();
             List<string> altKeys = alt.data.Keys.ToList();
@@ -1982,7 +1990,7 @@ namespace DPredict.ViewModels
                     //doc.Views.Redraw();
                     UnicornPlugin.UIInterop.UpdateCurrentAlt();  // TODO: check what this is doing, does it properly register all params?
 
-                    
+
                 }
 
             }
@@ -2105,7 +2113,7 @@ namespace DPredict.ViewModels
                                         RhinoObject ro = doc.Objects.Find(id);
                                         ro.Attributes.ObjectColor = System.Drawing.Color.LightBlue;
                                         ro.Attributes.ColorSource = ObjectColorSource.ColorFromObject;
-                                        
+
                                         Rhino.DocObjects.Material glassMaterial = new Rhino.DocObjects.Material
                                         {
                                             Name = "Glass",
@@ -2178,7 +2186,7 @@ namespace DPredict.ViewModels
             if (updateUI)
             {
                 UnicornPlugin.UIInterop.UpdateUIOutputData(metrics);
-                UnicornPlugin.UIInterop.UpdateUIOutputDataTrees(metrics_trees);                
+                UnicornPlugin.UIInterop.UpdateUIOutputDataTrees(metrics_trees);
             }
 
 

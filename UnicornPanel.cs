@@ -113,23 +113,20 @@ namespace DPredict
             //use localhost
             Browser = new ChromiumWebBrowser(@"http://localhost:7070/");
 
-            // var index = @"C:\dev\v4design\V4D4Rhino\V4D4RhinoViewer\v4d4rhinoviewer\public\";
-
 #else
             //use the built vue app files
 
-            string appDataPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
-            string grasshopperLibrariesPath = Path.Combine(appDataPath, "Grasshopper", "Libraries", "DPredict");
-            var path = grasshopperLibrariesPath;
+            string assemblyLocation = Assembly.GetExecutingAssembly().Location;
+            string pluginPath = Path.GetDirectoryName(assemblyLocation);
+            string resourcesPath = Path.Combine(pluginPath, "resources");
 
-            var indexPath = string.Format(@"{0}\dist\index.html", path);
+            var indexPath = string.Format(@"{0}\dist\index.html", resourcesPath);
             if (!File.Exists(indexPath))
                 Debug.WriteLine("Unicorn: Error. The html file doesn't exists : {0}", "Unicorn");
 
             indexPath = indexPath.Replace("\\", "/");
 
             Browser = new ChromiumWebBrowser(indexPath);
-            //index = indexPath;
 #endif
             // Allow the use of local resources in the browser
             Browser.BrowserSettings = new BrowserSettings

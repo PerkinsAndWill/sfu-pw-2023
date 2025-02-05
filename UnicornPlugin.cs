@@ -3,6 +3,7 @@ using Rhino.UI;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 
 namespace DPredict
 {
@@ -55,9 +56,6 @@ namespace DPredict
 
             Panels.RegisterPanel(this, typeof(UnicornPanel), "DPredict", DPredict.Properties.Resources.dpredict, PanelType.System);
 
-            string tmp = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "DPredict");
-            if (!Directory.Exists(tmp))
-                Directory.CreateDirectory(tmp);
 
 #if !DEBUG
 
@@ -68,14 +66,13 @@ namespace DPredict
                 {
                     // Create a new process
                     rhinoComputeProcess = new Process();
-                    
+
                     // Get the AppData folder path on Windows
-                    string appDataPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
-                    string grasshopperLibrariesPath = Path.Combine(appDataPath, "Grasshopper", "Libraries", "DPredict");
+                    string assemblyLocation = Assembly.GetExecutingAssembly().Location;
+                    string pluginPath = Path.GetDirectoryName(assemblyLocation);
+                    string resourcesPath = Path.Combine(pluginPath, "resources");
 
-                    string path = grasshopperLibrariesPath;
-
-                    string indexPath = string.Format(@"{0}\Server\compute.geometry.exe", path);
+                    string indexPath = string.Format(@"{0}\Server\compute.geometry.exe", resourcesPath);
                     indexPath = indexPath.Replace("\\", "/");
                     rhinoComputeProcess.StartInfo.FileName = indexPath;
                     
@@ -114,9 +111,12 @@ namespace DPredict
 
         public string GetDataFolderPath()
         {
-            string definitionPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            definitionPath = Path.GetDirectoryName(definitionPath);
-            return definitionPath + "\\data\\";
+            string dPredictdatalPath = "C:\\DPredict\\data\\";
+            if (!Directory.Exists(dPredictdatalPath))
+            {
+                Directory.CreateDirectory(dPredictdatalPath);
+            }
+            return dPredictdatalPath;
         }
 
         protected override void OnShutdown()
