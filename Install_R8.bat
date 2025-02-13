@@ -1,8 +1,11 @@
-@echo off
 :: Batch script to copy files from specific folders to target directories
 
-"C:\Program Files\Rhino 8\System\Yak.exe" install .\sunfish-0.7.0-beta-rh7_20-win.yak
-"C:\Program Files\Rhino 8\System\Yak.exe" install .\dpredict-1.5.0-alpha-rh7_32-win.yak
+
+"C:\Program Files\Rhino 8\System\Yak.exe" uninstall sunfish
+"C:\Program Files\Rhino 8\System\Yak.exe" uninstall dpredict
+
+"C:\Program Files\Rhino 8\System\Yak.exe" install .\sunfish-0.7.1-beta-rh7_20-win.yak
+"C:\Program Files\Rhino 8\System\Yak.exe" install .\dpredict-1.5.3-alpha-rh7_32-win.yak
 
 if %ERRORLEVEL% EQU 0 (
     echo 
