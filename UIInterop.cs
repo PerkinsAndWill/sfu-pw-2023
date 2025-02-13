@@ -23,6 +23,7 @@ namespace DPredict
 #endif
 
         UnicornViewModel ViewModel;
+        private JsonSerializerSettings jsonSettings = new JsonSerializerSettings { Culture = System.Globalization.CultureInfo.CurrentCulture };
 #if WIN
         public UIInterop(ChromiumWebBrowser browser, UnicornInterop unicornInterop)
         {
@@ -54,44 +55,55 @@ namespace DPredict
 
         public void SetUniqueSessionAltNum(string num)
         {
-            Browser.EvaluateScriptAsync("setUniqueSessionAltNum", JsonConvert.SerializeObject(num));
+            Browser.EvaluateScriptAsync("setUniqueSessionAltNum", JsonConvert.SerializeObject(num, jsonSettings));
         }
 
         public void UpdateParametricAnalysisProgress(int progress, int samplesLeft, bool isEstimate)
         {
-            Browser.EvaluateScriptAsync("updateParametricAnalysisProgress", JsonConvert.SerializeObject(progress), JsonConvert.SerializeObject(samplesLeft), JsonConvert.SerializeObject(isEstimate));
+            Browser.EvaluateScriptAsync("updateParametricAnalysisProgress", JsonConvert.SerializeObject(progress, jsonSettings), 
+                JsonConvert.SerializeObject(samplesLeft, jsonSettings), JsonConvert.SerializeObject(isEstimate, jsonSettings));
         }
 
-        internal void setWWRShadingPerWall(double[] wwrPerWall, int[] vShadingCountsPerWall, double[] vShadingDepthsPerWall, int[] hShadingCountsPerWall, double[] hShadingDepthsPerWall, double[] overhangsOffsetPerWall, double[] overhangsDepthtPerWall, int[] verticalFnOnOff, int[] horizontalFnOnOff, int[] overhangsOnOff)
+        internal void setWWRShadingPerWall(double[] wwrPerWall, int[] vShadingCountsPerWall, double[] vShadingDepthsPerWall, int[] hShadingCountsPerWall,
+            double[] hShadingDepthsPerWall, double[] overhangsOffsetPerWall, double[] overhangsDepthtPerWall, int[] verticalFnOnOff, 
+            int[] horizontalFnOnOff, int[] overhangsOnOff)
         {
-            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("setWWRShadingPerWall", JsonConvert.SerializeObject(wwrPerWall), JsonConvert.SerializeObject(vShadingCountsPerWall), JsonConvert.SerializeObject(vShadingDepthsPerWall), JsonConvert.SerializeObject(hShadingCountsPerWall), JsonConvert.SerializeObject(hShadingDepthsPerWall), JsonConvert.SerializeObject(overhangsOffsetPerWall), JsonConvert.SerializeObject(overhangsDepthtPerWall), JsonConvert.SerializeObject(verticalFnOnOff), JsonConvert.SerializeObject(horizontalFnOnOff), JsonConvert.SerializeObject(overhangsOnOff));
+            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("setWWRShadingPerWall", JsonConvert.SerializeObject(wwrPerWall, jsonSettings), 
+                JsonConvert.SerializeObject(vShadingCountsPerWall, jsonSettings), JsonConvert.SerializeObject(vShadingDepthsPerWall, jsonSettings), 
+                JsonConvert.SerializeObject(hShadingCountsPerWall, jsonSettings), JsonConvert.SerializeObject(hShadingDepthsPerWall, jsonSettings), 
+                JsonConvert.SerializeObject(overhangsOffsetPerWall, jsonSettings), JsonConvert.SerializeObject(overhangsDepthtPerWall, jsonSettings), 
+                JsonConvert.SerializeObject(verticalFnOnOff, jsonSettings), JsonConvert.SerializeObject(horizontalFnOnOff, jsonSettings), 
+                JsonConvert.SerializeObject(overhangsOnOff, jsonSettings));
         }
 
 
         internal void SetNumWalls(int numSegments)
         {
-            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("setNumWalls", JsonConvert.SerializeObject(numSegments));
+            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("setNumWalls", JsonConvert.SerializeObject(numSegments, jsonSettings));
         }
 
         public void UpdateSelectedWallsOnUI(int[] selectedWalls)
         {
-            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("onWallSelectedInRhino", JsonConvert.SerializeObject(selectedWalls));
+            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("onWallSelectedInRhino", JsonConvert.SerializeObject(selectedWalls, jsonSettings));
 
         }
 
         public void UpdateUIData(string key, object value)
         {
-            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("updateUIData(\"" + key + "\" , " + JsonConvert.SerializeObject(value) + ")");
+            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("updateUIData(\"" + key + "\" , " + 
+                JsonConvert.SerializeObject(value, jsonSettings) + ")");
         }
 
         public void UpdateUIInputData(string dataKey, object value)
         {
-            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("setInputData(\"" + dataKey + "\" , " + JsonConvert.SerializeObject(value) + ")");
+            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("setInputData(\"" + dataKey + "\" , " + 
+                JsonConvert.SerializeObject(value, jsonSettings) + ")");
         }
 
         internal void UpdateParametricAnalysisModels(string paramName, List<double> slopes, List<double> intercepts, List<double> correlations)
         {
-            string str = "updateParametricAnalysisModels(\"" + paramName + "\" , " + JsonConvert.SerializeObject(slopes) + "," + JsonConvert.SerializeObject(intercepts) + "," + JsonConvert.SerializeObject(correlations) + ")";
+            string str = "updateParametricAnalysisModels(\"" + paramName + "\" , " + JsonConvert.SerializeObject(slopes, jsonSettings) + "," + 
+                JsonConvert.SerializeObject(intercepts, jsonSettings) + "," + JsonConvert.SerializeObject(correlations, jsonSettings) + ")";
             Task<JavascriptResponse> task = Browser.EvaluateScriptAsync(str);
         }
 
@@ -104,22 +116,22 @@ namespace DPredict
 
         public void UpdateUIOutputData(Dictionary<string, List<double>> objects)
         {
-            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("recieveData(" + JsonConvert.SerializeObject(objects) + ")");
+            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("recieveData(" + JsonConvert.SerializeObject(objects, jsonSettings) + ")");
         }
 
         internal void UpdateUIOutputDataTrees(Dictionary<string, List<List<double>>> metrics_trees)
         {
-            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("recieveDataTrees(" + JsonConvert.SerializeObject(metrics_trees) + ")");
+            Task<JavascriptResponse> task = Browser.EvaluateScriptAsync("recieveDataTrees(" + JsonConvert.SerializeObject(metrics_trees, jsonSettings) + ")");
         }
         internal void UpdateInputsData(Dictionary<string, object> data)
         {
             if (!Browser.IsBrowserInitialized)
             {
-                Browser.ExecuteScriptAsyncWhenPageLoaded("setInputsData(" + JsonConvert.SerializeObject(data) + ")");
+                Browser.ExecuteScriptAsyncWhenPageLoaded("setInputsData(" + JsonConvert.SerializeObject(data, jsonSettings) + ")");
             }
             else
             {
-                Browser.ExecuteScriptAsync("setInputsData(" + JsonConvert.SerializeObject(data) + ")");
+                Browser.ExecuteScriptAsync("setInputsData(" + JsonConvert.SerializeObject(data, jsonSettings) + ")");
 
             }
         }
@@ -148,12 +160,12 @@ namespace DPredict
         }
         public void Log(object payload)
         {
-            Browser.EvaluateScriptAsync("log(" + JsonConvert.SerializeObject(payload) + ")");
+            Browser.EvaluateScriptAsync("log(" + JsonConvert.SerializeObject(payload, jsonSettings) + ")");
         }
 
         public void ConsoleLog(object message)
         {
-            Browser.EvaluateScriptAsync("console.log(" + JsonConvert.SerializeObject(message) + ")");
+            Browser.EvaluateScriptAsync("console.log(" + JsonConvert.SerializeObject(message, jsonSettings) + ")");
         }
 
         public async Task<List<GrasshopperDataTree>> UpdateBackendData(string key, string value, bool silent = false)
@@ -261,7 +273,7 @@ namespace DPredict
 
         public string GetAnalysisFolders()
         {
-            return JsonConvert.SerializeObject(ViewModel.GetAnalysisFolders());
+            return JsonConvert.SerializeObject(ViewModel.GetAnalysisFolders(), jsonSettings);
         }
 
         public string GetCurrentAlt()
