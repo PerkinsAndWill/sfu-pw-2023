@@ -446,7 +446,8 @@ namespace DPredict.ViewModels
             });
         }
 
-        RhinoView userView = null;
+        private RhinoView userView = null;
+        private bool userViewMaximized = false;
         internal Task SaveCustomViewAlt(List<Guid> objectGuids, Curve zone, string name, bool isAutomatedSave = false)
         {
             return Task.Run(() =>
@@ -469,13 +470,12 @@ namespace DPredict.ViewModels
 
                         // Store current view
                         int index = -1;
-                        bool oldViewMaximized = false;
                         if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
                             doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
                         {
                             userView = doc.Views.ActiveView;
                             index = doc.NamedViews.Add(userView.ActiveViewport.Name, userView.ActiveViewportID);
-                            oldViewMaximized = userView.Maximized;
+                            userViewMaximized = userView.Maximized;
                         }
                         // Create and set up a new view
                         RhinoView view = doc.Views.Find("CustomView", false);
@@ -546,7 +546,7 @@ namespace DPredict.ViewModels
                         if (userView != null && doc.Views.ActiveView != userView)
                         {
                             doc.NamedViews.Restore(index, userView.ActiveViewport);
-                            userView.Maximized = oldViewMaximized;
+                            userView.Maximized = userViewMaximized;
                             userView.Redraw();
                         }
 
