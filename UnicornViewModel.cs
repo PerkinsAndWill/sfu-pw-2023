@@ -292,7 +292,7 @@ namespace DPredict.ViewModels
         }
 
         private RhinoView parametricanalysisView;
-        internal void InitParametricViewport(object sender, DocumentOpenEventArgs e)
+        internal void InitParametricViewport()
         {
             RhinoDoc doc = RhinoDoc.ActiveDoc;
 
@@ -314,6 +314,10 @@ namespace DPredict.ViewModels
             if (parametricanalysisView == null)
             {
                 parametricanalysisView = doc.Views.Add("ParametricAnalysisView", DefinedViewportProjection.Perspective, new Rectangle(-10000, -10000, 800, 600), true);
+            }
+            else
+            {
+                parametricanalysisView.ActiveViewport.SetProjection(DefinedViewportProjection.Perspective, null, false);
             }
             if (parametricanalysisView == null)
             {
@@ -361,17 +365,6 @@ namespace DPredict.ViewModels
                             oldViewMaximized = oldView.Maximized;
                         }
 
-                        // Create and set up a new view
-                        //RhinoView view = doc.Views.Find("ParametricAnalysisView", false);
-                        //if (view == null)
-                        //{
-                        //    view = doc.Views.Add("ParametricAnalysisView", DefinedViewportProjection.Perspective, new Rectangle(-10000,-10000, 800, 600), true);
-                        //}
-                        //if (view == null)
-                        //{
-                        //    RhinoApp.WriteLine("Failed to create a new view.");
-                        //    return;
-                        //}
                         List<RhinoObject> allObjs = doc.Objects.Where(obj => obj != null).ToList();
 
                         ////Hide everything else so we could capture only our objects
@@ -488,6 +481,9 @@ namespace DPredict.ViewModels
                         if (view == null)
                         {
                             view = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(-10000, -10000, 800, 600), true);
+                        } else
+                        {
+                            view.ActiveViewport.SetProjection(DefinedViewportProjection.Perspective, null, false);
                         }
                         if (view == null)
                         {
@@ -734,7 +730,7 @@ namespace DPredict.ViewModels
             RhinoDoc.DeselectAllObjects += DeselectAllObjects;
             RhinoDoc.DeselectObjects += OnSelectObjects;
             RhinoDoc.EndOpenDocument += InitDoc;
-            RhinoDoc.EndOpenDocumentInitialViewUpdate += InitParametricViewport;
+            //RhinoDoc.EndOpenDocumentInitialViewUpdate += (sender, e) => InitParametricViewport();
             RhinoApp.Closing += CloseExcelAndDelete;
             Rhino.UI.Panels.Show += OnShowPanel;
 
@@ -1323,13 +1319,19 @@ namespace DPredict.ViewModels
 
             //load csv data
             string analysisFile = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder + "\\" + analysisName + "\\data.csv";
-            var csv = File.ReadAllText(analysisFile);
+            if (File.Exists(analysisFile) && Directory.GetParent(analysisFile).GetFiles().Length > 1)
+            {
+                var csv = File.ReadAllText(analysisFile);
 
-            VisualizeCorrelationsCSV(csv);
+                VisualizeCorrelationsCSV(csv);
 
-            //call js code to load data into DesignExplorer 
-            UnicornPlugin.UIInterop.VisualizeAnalysisData(csv);
-
+                //call js code to load data into DesignExplorer 
+                UnicornPlugin.UIInterop.VisualizeAnalysisData(csv);
+            }
+            else
+            {
+                UnicornPlugin.UIInterop.UpdateUIData("showAnalysisVisualization", (object)false);
+            }
         }
 
         internal void OpenAnalysisFolder()
@@ -1485,6 +1487,7 @@ namespace DPredict.ViewModels
 
         async internal Task RunParametricAnalysis(string samplesJSON, string focusDictStr, string overrideParams)
         {
+            RhinoApp.InvokeOnUiThread( (Action)delegate { InitParametricViewport(); });
             isParametricAnalysisRunning = true;
             Dictionary<string, int> focusDict = JsonConvert.DeserializeObject<Dictionary<string, int>>(focusDictStr);
 
@@ -1632,37 +1635,6 @@ namespace DPredict.ViewModels
                         List<double> outputs = getOutputsFromComputeResults(res);
                         allOutputs.Add(outputs);
 
-                        bool takeSreenshot = true;
-                        if (takeSreenshot)
-                        {
-                            RhinoDoc doc = RhinoDoc.ActiveDoc;
-                            if (parametricanalysisView == null || parametricanalysisView.ActiveViewport == null)
-                            {
-                                InitParametricViewport(null, (DocumentOpenEventArgs)DocumentOpenEventArgs.Empty);
-                            }
-                            List<Guid> guids = CollectResults(res, ref benchmark, false, parametricanalysisView.ActiveViewportID);
-                            // add context guids as duplicate geometry
-                            ObjectAttributes attributes = new ObjectAttributes();
-                            attributes.ViewportId = parametricanalysisView.ActiveViewportID;
-                            guids.AddRange(context.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
-
-                            SwitchDaylightMesh(0, benchmark).Wait();
-
-                            List<Guid> visibleGuids = guids.Select(id => doc.Objects.Find(id)).Where(obj => obj != null).Where(obj => !obj.IsHidden).Select(obj => obj.Id).ToList();
-                            double height = benchmark.data["floor_to_floor"] is double ? (double)benchmark.data["floor_to_floor"] : 3.2;
-
-                            SaveObjectsAndImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
-
-
-                            guids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
-                            guids.Clear();
-                            if (doc.Views.ActiveView != null)
-                            {
-                                doc.Views.Redraw();
-                            }
-                        }
-
-
                         //---------------log results to csv
                         List<double> allValues = new List<double>();
                         //Adding all the inputs
@@ -1680,6 +1652,31 @@ namespace DPredict.ViewModels
                             sw.Write(csvLine);
                         }
                         //--------------end log results to csv
+
+                        //--------------take screenshot
+                        RhinoDoc doc = RhinoDoc.ActiveDoc;
+                        List<Guid> guids = CollectResults(res, ref benchmark, false, parametricanalysisView.ActiveViewportID);
+                        // add context guids as duplicate geometry
+                        ObjectAttributes attributes = new ObjectAttributes();
+                        attributes.ViewportId = parametricanalysisView.ActiveViewportID;
+                        guids.AddRange(context.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
+                        guids.AddRange(benchmark.additionalBuildingGeometry.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
+
+                        SwitchDaylightMesh(0, benchmark).Wait();
+
+                        List<Guid> visibleGuids = guids.Select(id => doc.Objects.Find(id)).Where(obj => obj != null).Where(obj => !obj.IsHidden).Select(obj => obj.Id).ToList();
+                        double height = benchmark.data["floor_to_floor"] is double ? (double)benchmark.data["floor_to_floor"] : 3.2;
+
+                        SaveObjectsAndImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
+
+
+                        guids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
+                        guids.Clear();
+                        if (doc.Views.ActiveView != null)
+                        {
+                            doc.Views.Redraw();
+                        }
+                        //--------------end screenshot
                     }
                 }
                 catch (Exception e)
