@@ -192,6 +192,7 @@ namespace DPredict
         public void ClipByFootprint(string enable)
         {
             ViewModel.Clip(JsonConvert.DeserializeObject<bool>(enable));
+            ViewModel.clippingState = JsonConvert.DeserializeObject<bool>(enable);
         }
 
         public void onContextHovered(bool highlight)

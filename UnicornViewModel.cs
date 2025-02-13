@@ -282,6 +282,7 @@ namespace DPredict.ViewModels
         internal List<GeometryBase> context = new List<GeometryBase>();
         internal List<Guid> contextGuids = new List<Guid>();
         internal string epcSpreadsheet = "";
+        internal bool clippingState = false;
 
         DateTime lastRequestDate;
 
@@ -1981,7 +1982,7 @@ namespace DPredict.ViewModels
                     doc.Layers.Modify(resultsLayer, layerIndex, true);
                     doc.Views.Redraw();
 
-                    Clip(true);
+                    if (clippingState) Clip(clippingState);
 
                     await SaveCurrentAlt(currentAlternative.data["name"].ToString(), true);
                     //doc.Views.Redraw();
