@@ -334,6 +334,49 @@ namespace DPredict.ViewModels
             }
         }
 
+        internal void InitCustomViewport()
+        {
+            RhinoDoc doc = RhinoDoc.ActiveDoc;
+
+            // Store current view
+            RhinoView oldView = null;
+            Guid oldViewportId = Guid.Empty;
+            int index = -1;
+            bool oldViewMaximized = false;
+            if (doc.Views.ActiveView != null)
+            {
+                oldView = doc.Views.ActiveView;
+                oldViewportId = oldView.ActiveViewportID;
+                index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldViewportId);
+                oldViewMaximized = oldView.Maximized;
+            }
+
+            // Create and set up a new view
+            customView = doc.Views.Find("CustomView", false);
+            if (customView == null)
+            {
+                customView = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(-9000, -9000, 800, 600), true);
+            }
+            else
+            {
+                customView.ActiveViewport.SetProjection(DefinedViewportProjection.Perspective, null, false);
+            }
+            if (customView == null)
+            {
+                RhinoApp.WriteLine("Failed to create a new view.");
+                return;
+            }
+
+            // restore previous view
+            if (oldView != null && doc.Views.ActiveView != oldView)
+            {
+                doc.NamedViews.Restore(index, oldView.ActiveViewport);
+                oldView.Maximized = oldViewMaximized;
+            }
+
+
+        }
+
         internal Task SaveObjectsAndImage(List<Guid> objectGuids, Alternative alt, double height, string name, string subfolder, bool moveFar = true)
         {
             return Task.Run(() =>
@@ -446,16 +489,23 @@ namespace DPredict.ViewModels
             });
         }
 
+        private RhinoView customView = null;
         private RhinoView userView = null;
         private bool userViewMaximized = false;
         internal Task SaveCustomViewAlt(List<Guid> objectGuids, Curve zone, string name, bool isAutomatedSave = false)
         {
+           
             return Task.Run(() =>
             {
                 try
                 {
                     RhinoApp.InvokeOnUiThread((Action)delegate
                     {
+                        if (customView == null)
+                        {
+                            InitCustomViewport(); 
+                        }
+
                         RhinoDoc doc = RhinoDoc.ActiveDoc;
                         List<RhinoObject> objects = objectGuids.Select(guid => doc.Objects.Find(guid)).Where(obj => obj != null).ToList();
 
@@ -470,29 +520,20 @@ namespace DPredict.ViewModels
 
                         // Store current view
                         int index = -1;
-                        if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
+                        if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport != null &&
+                            doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
                             doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
                         {
                             userView = doc.Views.ActiveView;
-                            index = doc.NamedViews.Add(userView.ActiveViewport.Name, userView.ActiveViewportID);
                             userViewMaximized = userView.Maximized;
+                            if (doc.Views.Find(userView.ActiveViewportID) == null)
+                            {
+                                index = doc.NamedViews.Add(userView.ActiveViewport.Name, userView.ActiveViewportID);
+                            }
                         }
-                        // Create and set up a new view
-                        RhinoView view = doc.Views.Find("CustomView", false);
-                        if (view == null)
-                        {
-                            view = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(-10000, -10000, 800, 600), true);
-                        } else
-                        {
-                            view.ActiveViewport.SetProjection(DefinedViewportProjection.Perspective, null, false);
-                        }
-                        if (view == null)
-                        {
-                            RhinoApp.WriteLine("Failed to create a new view.");
-                            return;
-                        }
+
                         Guid cPlaneGuid = Guid.Empty;
-                        ClipInViewport(true, view.ActiveViewportID, ref cPlaneGuid);
+                        ClipInViewport(true, customView.ActiveViewportID, ref cPlaneGuid);
 
                         double pad = 0.02;    // A little padding...
                         double dx = (bbox.Max.X - bbox.Min.X) * pad;
@@ -502,14 +543,14 @@ namespace DPredict.ViewModels
 
                         // Zoom to the bounding box of selected objects
 
-                        bool succeeded = view.ActiveViewport.ZoomBoundingBox(bbox);
-                        view.Redraw();
+                        bool succeeded = customView.ActiveViewport.ZoomBoundingBox(bbox);
+                        customView.Redraw();
 
                         DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Arctic");
 
 
                         // Capture the view to a bitmap
-                        Bitmap bm = view.CaptureToBitmap(new Size(view.ActiveViewport.Size.Width, view.ActiveViewport.Size.Height), displaymode);
+                        Bitmap bm = customView.CaptureToBitmap(new Size(customView.ActiveViewport.Size.Width, customView.ActiveViewport.Size.Height), displaymode);
 
                         currentAlternative.imageBytes = ImageToBase64String(bm);
                         string number = currentAlternative.data["num"].ToString();  // keep the record
@@ -543,9 +584,9 @@ namespace DPredict.ViewModels
                         }
 
                         // restore previous view
-                        if (userView != null && doc.Views.ActiveView != userView)
+                        if (userView != null)
                         {
-                            doc.NamedViews.Restore(index, userView.ActiveViewport);
+                            //doc.NamedViews.Restore(index, userView.ActiveViewport);
                             userView.Maximized = userViewMaximized;
                             userView.Redraw();
                         }
