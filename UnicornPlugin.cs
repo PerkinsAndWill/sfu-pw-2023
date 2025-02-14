@@ -130,14 +130,6 @@ namespace DPredict
 
             }
 
-            string definitionPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            definitionPath = Path.GetDirectoryName(definitionPath);
-            string savingFolder = definitionPath + "\\data";
-            if (File.Exists(savingFolder + "\\current.json"))
-            {
-                File.Delete(savingFolder + "\\current.json");
-            }
-
             Instance.PanelUserControl?.Dispose();
             base.OnShutdown();
 
