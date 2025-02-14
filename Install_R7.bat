@@ -1,3 +1,4 @@
+@echo off
 :: Batch script to copy files from specific folders to target directories
 
 
@@ -8,7 +9,7 @@
 "C:\Program Files\Rhino 7\System\Yak.exe" install .\dpredict-1.5.3-alpha-rh7_32-win.yak
 
 if %ERRORLEVEL% EQU 0 (
-    echo 
+    echo Success
 ) else (
     echo An error occurred.
 )
