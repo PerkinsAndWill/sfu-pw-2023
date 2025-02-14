@@ -83,7 +83,13 @@ export default {
         .selectAll()
         .data(data)
         .join("rect")
-        .attr("fill", (d) => d3.schemeRdBu[3][d.value > 0 ? 2 : 0])
+          .attr("fill", (d) => {
+              let i = 1;
+              if (Math.abs(d.value) >= 0.5) {
+                  return d3.schemeRdBu[3][ d.value > 0 ? 2 : 0];
+              }
+              return "#dddddd";
+          })
         .attr("x", (d) => x(Math.min(d.value, 0)))
         .attr("y", (d) => y(d.title))
         .attr("width", (d) => Math.abs(x(d.value) - x(0)))
