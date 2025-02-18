@@ -18,7 +18,7 @@ namespace DPredict
         public static UnicornCommand Instance { get; private set; }
 
         ///<returns>The command name as it appears on the Rhino command line.</returns>
-        public override string EnglishName => "Test";
+        public override string EnglishName => "DPredict";
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
