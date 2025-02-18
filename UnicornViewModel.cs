@@ -387,7 +387,6 @@ namespace DPredict.ViewModels
                 oldView.Maximized = oldViewMaximized;
             }
 
-
         }
 
         internal Task SaveObjectsAndImage(List<Guid> objectGuids, Alternative alt, double height, string name, string subfolder, bool moveFar = true)
@@ -409,19 +408,6 @@ namespace DPredict.ViewModels
                             return;
                         }
 
-                        // Store current view
-                        RhinoView oldView = null;
-                        Guid oldViewportId = Guid.Empty;
-                        int index = -1;
-                        bool oldViewMaximized = false;
-                        if (doc.Views.ActiveView != null)
-                        {
-                            oldView = doc.Views.ActiveView;
-                            oldViewportId = oldView.ActiveViewportID;
-                            index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldViewportId);
-                            oldViewMaximized = oldView.Maximized;
-                        }
-
                         List<RhinoObject> allObjs = doc.Objects.Where(obj => obj != null).ToList();
 
                         ////Hide everything else so we could capture only our objects
@@ -430,24 +416,15 @@ namespace DPredict.ViewModels
                             if (!objectGuids.Contains(obj.Id))
                             {
                                 ObjectAttributes attributes = obj.Attributes;
-                                attributes.ViewportId = oldViewportId;
+                                attributes.ViewportId = userView.ActiveViewportID;
                                 doc.Objects.ModifyAttributes(obj.Id, attributes, true);
                             }
                         });
 
-                        // Calculate the bounding box on the 
-                        BoundingBox bbox = alt.zone.GetBoundingBox(false);
-
                         Guid cPlaneGuid = Guid.Empty;
                         Clip(alt.zone, parametricanalysisView.ActiveViewportID, ref cPlaneGuid, true, height);
 
-                        const double pad = 0.02;    // A little padding...
-                        double dx = (bbox.Max.X - bbox.Min.X) * pad;
-                        double dy = (bbox.Max.Y - bbox.Min.Y) * pad;
-                        double dz = (bbox.Max.Z - bbox.Min.Z) * pad;
-                        bbox.Inflate(dx, dy, dz);
-
-                        parametricanalysisView.ActiveViewport.ZoomBoundingBox(bbox);
+                        parametricanalysisView.ActiveViewport.ZoomBoundingBox(alt.BoundingBox());
                         parametricanalysisView.Redraw();
 
                         DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Arctic");
@@ -487,12 +464,6 @@ namespace DPredict.ViewModels
                             doc.Objects.Delete(cPlaneGuid, true);
                         }
 
-                        // restore previous view
-                        if (oldView != null && doc.Views.ActiveView != oldView)
-                        {
-                            doc.NamedViews.Restore(index, oldView.ActiveViewport);
-                            oldView.Maximized = oldViewMaximized;
-                        }
                     });
                 }
                 catch (Exception ex)
@@ -531,20 +502,6 @@ namespace DPredict.ViewModels
                         // Calculate the bounding box on the 
                         BoundingBox bbox = zone.GetBoundingBox(false);
 
-                        // Store current view
-                        int index = -1;
-                        if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport != null &&
-                            doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
-                            doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
-                        {
-                            userView = doc.Views.ActiveView;
-                            userViewMaximized = userView.Maximized;
-                            if (doc.Views.Find(userView.ActiveViewportID) == null)
-                            {
-                                index = doc.NamedViews.Add(userView.ActiveViewport.Name, userView.ActiveViewportID);
-                            }
-                        }
-
                         Guid cPlaneGuid = Guid.Empty;
                         ClipInViewport(true, customView.ActiveViewportID, ref cPlaneGuid);
 
@@ -560,7 +517,6 @@ namespace DPredict.ViewModels
                         customView.Redraw();
 
                         DisplayModeDescription displaymode = DisplayModeDescription.FindByName("Arctic");
-
 
                         // Capture the view to a bitmap
                         Bitmap bm = customView.CaptureToBitmap(new Size(customView.ActiveViewport.Size.Width, customView.ActiveViewport.Size.Height), displaymode);
@@ -594,14 +550,6 @@ namespace DPredict.ViewModels
                         if (cPlaneGuid != Guid.Empty)
                         {
                             doc.Objects.Delete(cPlaneGuid, true);
-                        }
-
-                        // restore previous view
-                        if (userView != null)
-                        {
-                            //doc.NamedViews.Restore(index, userView.ActiveViewport);
-                            userView.Maximized = userViewMaximized;
-                            userView.Redraw();
                         }
 
                         UnicornPlugin.UIInterop.UpdateAlts();
@@ -1727,7 +1675,8 @@ namespace DPredict.ViewModels
                         SaveObjectsAndImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
 
 
-                        guids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
+                        //guids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
+                        doc.Objects.Delete(guids, true);
                         guids.Clear();
                         if (doc.Views.ActiveView != null)
                         {
@@ -1872,12 +1821,25 @@ namespace DPredict.ViewModels
 
             return outputs;
         }
+
+        protected void UpdateUserView()
+        {
+            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
+                            doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
+            {
+                userView = doc.Views.ActiveView;
+            }
+        }
+
         async internal Task<List<GrasshopperDataTree>> ComputeFromData(Alternative alt, List<GeometryBase> context, bool loadToRhino = true)
         {
             if (alt.zone == null)
             {
                 return null;
             }
+
+            UpdateUserView();
 
             List<GrasshopperDataTree> result = null;
             if (loadToRhino)
@@ -1991,7 +1953,7 @@ namespace DPredict.ViewModels
                     alt.currentObjectsGuids.ForEach(id =>
                     {
                         Rhino.DocObjects.ObjRef objRef = new Rhino.DocObjects.ObjRef(doc, id);
-                        doc.Objects.Delete(objRef, true, true);
+                        doc.Objects.Delete(objRef, true, true); 
                     });
                     alt.currentObjectsGuids.Clear();
 
@@ -2009,7 +1971,7 @@ namespace DPredict.ViewModels
                         layerIndex = resultsLayer.Index;
                     }
 
-                    List<Guid> addedObjectsguids = CollectResults(result, ref alt, true, Guid.Empty);
+                    List<Guid> addedObjectsguids = CollectResults(result, ref alt, true, Guid.Empty);  
 
                     //Setting all the objects created from Rhino Compute as non-selectable and non-changable i.e. locked.
                     addedObjectsguids.ForEach(id =>
@@ -2042,7 +2004,7 @@ namespace DPredict.ViewModels
 
                     await SaveCurrentAlt(currentAlternative.data["name"].ToString(), true);
                     //doc.Views.Redraw();
-                    UnicornPlugin.UIInterop.UpdateCurrentAlt();  // TODO: check what this is doing, does it properly register all params?
+                    UnicornPlugin.UIInterop.UpdateCurrentAlt();  
 
 
                 }
