@@ -198,6 +198,19 @@ namespace DPredict.ViewModels
             return output;
         }
 
+        public BoundingBox BoundingBox(double pad = 0.2)
+        {
+            // Calculate the bounding box on the 
+            BoundingBox bbox = zone.GetBoundingBox(false);
+
+            double dx = (bbox.Max.X - bbox.Min.X) * pad;
+            double dy = (bbox.Max.Y - bbox.Min.Y) * pad;
+            double dz = (bbox.Max.Z - bbox.Min.Z) * pad;
+            bbox.Inflate(dx, dy, dz);
+
+            return bbox;
+        }
+
         internal Alternative()
         {
             data["num"] = RandomHexString(5);
@@ -991,6 +1004,8 @@ namespace DPredict.ViewModels
 
                 await UpdateData(currentAlternative, "zone", geometry, false, true, false);
                 UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", true);
+
+                userView.ActiveViewport.ZoomBoundingBox(currentAlternative.BoundingBox());
             });
         }
 
