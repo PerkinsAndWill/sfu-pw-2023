@@ -9,6 +9,11 @@
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe ",
       "commandLineArgs": "$(TargetPath) /netfx"
+    },
+    "DPredict R8 file": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\Rhino 8\\System\\Rhino.exe ",
+      "commandLineArgs": "$(TargetPath) \"C:\\Users\\ampanavoss\\Downloads\\SOLIDI-JFL-BASE-BLOCKS.3dm\" /netfx"
     }
   }
 }
