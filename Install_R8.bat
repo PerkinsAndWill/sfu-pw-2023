@@ -5,7 +5,7 @@
 "C:\Program Files\Rhino 8\System\Yak.exe" uninstall dpredict
 
 "C:\Program Files\Rhino 8\System\Yak.exe" install .\sunfish-0.7.1-beta-rh7_20-win.yak
-"C:\Program Files\Rhino 8\System\Yak.exe" install .\dpredict-1.5.4-alpha-rh7_32-win.yak
+"C:\Program Files\Rhino 8\System\Yak.exe" install .\dpredict-1.5.5-alpha-rh7_32-win.yak
 
 if %ERRORLEVEL% EQU 0 (
     echo Sucess
