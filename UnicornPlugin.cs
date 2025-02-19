@@ -1,4 +1,5 @@
-﻿using Rhino.PlugIns;
+﻿using Rhino;
+using Rhino.PlugIns;
 using Rhino.UI;
 using System;
 using System.Diagnostics;
@@ -86,7 +87,19 @@ namespace DPredict
                     {
                         if (e.Data != null && e.Data.Contains("Loading Completed"))
                         {
-                            ServerLoaded();
+                            try
+                            {
+                                int waitCycles = 0;
+                                while (ServerLoaded == null && waitCycles < 5000)
+                                {
+                                    System.Threading.Thread.Sleep(100);
+                                    waitCycles++;
+                                }
+                                ServerLoaded();
+                            } catch (Exception ex)
+                            {
+                                RhinoApp.WriteLine("Encountered issue opening DPredict, please try opening panel manually.");
+                            }
                         }
 
                     };

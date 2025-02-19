@@ -794,7 +794,10 @@ namespace DPredict.ViewModels
 
             UnicornPlugin.ServerLoaded += () =>
             {
-                UnicornPlugin.UIInterop.SetServerLoaded();
+                if (UnicornPlugin.UIInterop != null)
+                {
+                    UnicornPlugin.UIInterop.SetServerLoaded();
+                }
             };
 
             ZoneSet += (curve) =>
