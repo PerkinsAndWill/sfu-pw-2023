@@ -98,7 +98,7 @@ namespace DPredict
                                 ServerLoaded();
                             } catch (Exception ex)
                             {
-                                RhinoApp.WriteLine("Encountered issue opening DPredict, please try opening panel manually.");
+                                RhinoApp.WriteLine("Could not stop spinning wheel, it will reset on first use.");
                             }
                         }
 
