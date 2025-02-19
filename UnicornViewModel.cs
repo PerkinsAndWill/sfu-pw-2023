@@ -305,21 +305,84 @@ namespace DPredict.ViewModels
             return SaveCustomViewAlt(currentAlternative.currentObjectsGuids, currentAlternative.zone, name, isAutomatedSave);
         }
 
+        private RhinoView customView = null;
+        private RhinoView userView = null;
+        internal void InitViews()
+        {
+            RhinoDoc doc = RhinoDoc.ActiveDoc;
+
+            // Store current view
+            bool oldViewMaximized = false;
+            if (doc.Views.ActiveView != null)
+            {
+                userView = doc.Views.ActiveView;
+                oldViewMaximized = userView.Maximized;
+            }
+
+            // Create and set up a new view
+            parametricanalysisView = doc.Views.Find("ParametricAnalysisView", false);
+            if (parametricanalysisView == null)
+            {
+                parametricanalysisView = doc.Views.Add("ParametricAnalysisView", DefinedViewportProjection.Perspective, new Rectangle(-10000, -10000, 800, 600), true);
+            }
+            else
+            {
+                parametricanalysisView.ActiveViewport.SetProjection(DefinedViewportProjection.Perspective, null, false);
+            }
+            if (parametricanalysisView == null)
+            {
+                RhinoApp.WriteLine("Failed to create parametric view.");
+            }
+
+            // Create and set up a new view
+            customView = doc.Views.Find("CustomView", false);
+            if (customView == null)
+            {
+                customView = doc.Views.Add("CustomView", DefinedViewportProjection.Perspective, new Rectangle(-9000, -9000, 800, 600), true);
+            }
+            else
+            {
+                customView.ActiveViewport.SetProjection(DefinedViewportProjection.Perspective, null, false);
+            }
+            if (customView == null)
+            {
+                RhinoApp.WriteLine("Failed to create custom view.");
+            }
+
+            // restore previous view
+            if (userView != null && doc.Views.ActiveView != userView)
+            {
+                doc.Views.ActiveView = userView;
+                userView.Maximized = oldViewMaximized;
+            }
+        }
+
+        protected void UpdateUserView(bool forceUpdate = false)
+        {
+            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
+                            doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
+            {
+                userView = doc.Views.ActiveView;
+                return;
+            }
+            else if (forceUpdate)
+            {
+                userView = doc.Views.Find("Top", false);  //doc.Views.GetViewList(true, false)[0];
+            }
+        }
+
         private RhinoView parametricanalysisView;
-        internal void InitParametricViewport()
+        internal void UpdateParametricViewport()
         {
             RhinoDoc doc = RhinoDoc.ActiveDoc;
 
             // Store current view
             RhinoView oldView = null;
-            Guid oldViewportId = Guid.Empty;
-            int index = -1;
             bool oldViewMaximized = false;
             if (doc.Views.ActiveView != null)
             {
                 oldView = doc.Views.ActiveView;
-                oldViewportId = oldView.ActiveViewportID;
-                index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldViewportId);
                 oldViewMaximized = oldView.Maximized;
             }
 
@@ -342,25 +405,21 @@ namespace DPredict.ViewModels
             // restore previous view
             if (oldView != null && doc.Views.ActiveView != oldView)
             {
-                doc.NamedViews.Restore(index, oldView.ActiveViewport);
+                doc.Views.ActiveView = oldView;
                 oldView.Maximized = oldViewMaximized;
             }
         }
 
-        internal void InitCustomViewport()
+        internal void UpdateCurstomViewport()
         {
             RhinoDoc doc = RhinoDoc.ActiveDoc;
 
             // Store current view
             RhinoView oldView = null;
-            Guid oldViewportId = Guid.Empty;
-            int index = -1;
             bool oldViewMaximized = false;
             if (doc.Views.ActiveView != null)
             {
                 oldView = doc.Views.ActiveView;
-                oldViewportId = oldView.ActiveViewportID;
-                index = doc.NamedViews.Add(oldView.ActiveViewport.Name, oldViewportId);
                 oldViewMaximized = oldView.Maximized;
             }
 
@@ -383,7 +442,7 @@ namespace DPredict.ViewModels
             // restore previous view
             if (oldView != null && doc.Views.ActiveView != oldView)
             {
-                doc.NamedViews.Restore(index, oldView.ActiveViewport);
+                doc.Views.ActiveView = oldView;
                 oldView.Maximized = oldViewMaximized;
             }
 
@@ -473,9 +532,6 @@ namespace DPredict.ViewModels
             });
         }
 
-        private RhinoView customView = null;
-        private RhinoView userView = null;
-        private bool userViewMaximized = false;
         internal Task SaveCustomViewAlt(List<Guid> objectGuids, Curve zone, string name, bool isAutomatedSave = false)
         {
            
@@ -487,7 +543,7 @@ namespace DPredict.ViewModels
                     {
                         if (customView == null)
                         {
-                            InitCustomViewport(); 
+                            UpdateCurstomViewport(); 
                         }
 
                         RhinoDoc doc = RhinoDoc.ActiveDoc;
@@ -619,7 +675,6 @@ namespace DPredict.ViewModels
 
                 UnicornPlugin.UIInterop.SetNumWalls(wwrPerWall.Length);
                 UnicornPlugin.UIInterop.setWWRShadingPerWall(wwrPerWall, vShadingCountsPerWall, vShadingDepthsPerWall, hShadingCountsPerWall, hShadingDepthsPerWall, overhangsOffsetPerWall, overhangsDepthPerWall, vShadingOnOffPerWall, hShadingOnOffPerWall, overhangsOnOffPerWall);
-                // TODO: set analysis switches to ON/OFF
 
                 await UpdateData(currentAlternative, "WWR_per_wall", wwrPerWall, true);
                 await UpdateData(currentAlternative, "interior_walls", alternative.interiorWalls, true);
@@ -733,7 +788,7 @@ namespace DPredict.ViewModels
             RhinoDoc.DeselectAllObjects += DeselectAllObjects;
             RhinoDoc.DeselectObjects += OnSelectObjects;
             RhinoDoc.EndOpenDocument += InitDoc;
-            //RhinoDoc.EndOpenDocumentInitialViewUpdate += (sender, e) => InitParametricViewport();
+            RhinoDoc.EndOpenDocumentInitialViewUpdate += (sender, e) => { InitViews(); };
             RhinoApp.Closing += CloseExcelAndDelete;
             Rhino.UI.Panels.Show += OnShowPanel;
 
@@ -953,7 +1008,6 @@ namespace DPredict.ViewModels
                 await UpdateData(currentAlternative, "zone", geometry, false, true, false);
                 UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", true);
 
-                userView.ActiveViewport.ZoomBoundingBox(currentAlternative.BoundingBox());
             });
         }
 
@@ -1301,9 +1355,16 @@ namespace DPredict.ViewModels
                 alt.data[key] = newValue;
             }
 
-
             if (!silent)
             {
+                if (key == "zone" && loadToRhino)
+                {
+                    RhinoApp.InvokeOnUiThread((Action)delegate
+                    {
+                        UpdateUserView();
+                        userView.ActiveViewport.ZoomBoundingBox(alt.BoundingBox());
+                    });
+                }
                 return await ComputeFromData(alt, context, loadToRhino);
             }
             else
@@ -1492,7 +1553,10 @@ namespace DPredict.ViewModels
 
         async internal Task RunParametricAnalysis(string samplesJSON, string focusDictStr, string overrideParams)
         {
-            RhinoApp.InvokeOnUiThread( (Action)delegate { InitParametricViewport(); });
+            RhinoApp.InvokeOnUiThread((Action)delegate {
+                UpdateUserView();
+                UpdateParametricViewport();
+            });
             isParametricAnalysisRunning = true;
             Dictionary<string, int> focusDict = JsonConvert.DeserializeObject<Dictionary<string, int>>(focusDictStr);
 
@@ -1531,6 +1595,7 @@ namespace DPredict.ViewModels
             //--------------end csv prep
 
             int num = 0;
+            int daylightMeshIndex = currentAlternative.currentDaylightMeshIndex;
             Alternative benchmark = CloneAlt(currentAlternative);
             foreach (Dictionary<string, string> sample in samples)
             {
@@ -1667,7 +1732,7 @@ namespace DPredict.ViewModels
                         guids.AddRange(context.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
                         guids.AddRange(benchmark.additionalBuildingGeometry.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
 
-                        SwitchDaylightMesh(0, benchmark).Wait();
+                        SwitchDaylightMesh(daylightMeshIndex, benchmark).Wait();
 
                         List<Guid> visibleGuids = guids.Select(id => doc.Objects.Find(id)).Where(obj => obj != null).Where(obj => !obj.IsHidden).Select(obj => obj.Id).ToList();
                         double height = benchmark.data["floor_to_floor"] is double ? (double)benchmark.data["floor_to_floor"] : 3.2;
@@ -1822,24 +1887,12 @@ namespace DPredict.ViewModels
             return outputs;
         }
 
-        protected void UpdateUserView()
-        {
-            RhinoDoc doc = RhinoDoc.ActiveDoc;
-            if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
-                            doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
-            {
-                userView = doc.Views.ActiveView;
-            }
-        }
-
         async internal Task<List<GrasshopperDataTree>> ComputeFromData(Alternative alt, List<GeometryBase> context, bool loadToRhino = true)
         {
             if (alt.zone == null)
             {
                 return null;
             }
-
-            UpdateUserView();
 
             List<GrasshopperDataTree> result = null;
             if (loadToRhino)
