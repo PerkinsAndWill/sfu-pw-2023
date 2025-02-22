@@ -120,7 +120,6 @@ namespace DPredict.ViewModels
     class Alternative
     {
         static Random rand = new Random();
-        internal List<Guid> currentObjectsGuids = new List<Guid>();
 
         [JsonProperty]
         internal Dictionary<string, object> data = new Dictionary<string, object>();
@@ -129,61 +128,95 @@ namespace DPredict.ViewModels
         internal Dictionary<string, List<double>> metrics = new Dictionary<string, List<double>>();
 
         [JsonProperty]
-        internal Curve zone;
-
-        [JsonProperty]
-        internal List<Curve> interiorWalls = new List<Curve>();
-
-        [JsonProperty]
         internal string imageBytes;
 
         [JsonProperty]
         internal string timestamp;
 
+        // user inputs
+        internal Curve zone;
+
+        internal List<Curve> interiorWalls = new List<Curve>();
+
+        internal List<Brep> additionalBuildingGeometry = new List<Brep>();
+
+        internal List<GeometryBase> context = new List<GeometryBase>();
+
+        // refs to user inputs
+        [JsonProperty]
         internal Guid zoneGuid;
+
+        [JsonProperty]
         internal List<Guid> interiorWallsGuids = new List<Guid>();
 
+        [JsonProperty]
+        internal List<Guid> additionalBuildingGeometryGuids = new List<Guid>();
+
+        [JsonProperty]
+        internal List<Guid> contextGuids = new List<Guid>();
+
+        // generated
+        internal List<Guid> currentObjectsGuids = new List<Guid>();
         internal List<Guid> wallsGuid = new List<Guid>();
         internal List<Brep> walls = new List<Brep>();
-
         internal Mesh currentlySelectedWall;
         internal List<Brep> currentlySelectedWalls = new List<Brep>();
         internal List<int> wallDirections = new List<int>();
         internal List<Guid> daylightMeshesIds = new List<Guid>();
         internal int currentDaylightMeshIndex = 0;
 
-        [JsonProperty]
-        internal List<Guid> additionalBuildingGeometryGuids = new List<Guid>();
-
-        [JsonProperty]
-        internal List<Brep> additionalBuildingGeometry = new List<Brep>();
-
         public static void Clear(Alternative alt, RhinoDoc doc)
         {
             // clear zone
             alt.zone = null;
-
-            // clear exterior walls
-            alt.walls = new List<Brep>();
-            alt.wallsGuid.ForEach(guid => doc.Objects.Delete(guid, true));
-            alt.wallsGuid = new List<Guid>();
+            alt.zoneGuid = Guid.Empty;
 
             // clear interior walls
             alt.interiorWalls = new List<Curve>();
-            //alt.interiorWallsGuids.ForEach(guid => doc.Objects.Delete(guid, true));  // keep curve geometries in rhino
             alt.interiorWallsGuids = new List<Guid>();
 
-            // clear other geometries
-            alt.currentObjectsGuids.ForEach(guid => doc.Objects.Delete(guid, true));
-            alt.currentObjectsGuids = new List<Guid>();
-
-            alt.additionalBuildingGeometryGuids.ForEach(guid => doc.Objects.Delete(guid, true));
+            // clear additional building geometry
             alt.additionalBuildingGeometryGuids = new List<Guid>();
             alt.additionalBuildingGeometry = new List<Brep>();
 
+            // clear context
+            alt.context = new List<GeometryBase>();
+            alt.contextGuids = new List<Guid>();
+
+            // clear exterior walls (generated)
+            doc.Objects.Delete(alt.wallsGuid, true);
+            alt.walls = new List<Brep>();
+            alt.wallsGuid = new List<Guid>();
+
+            // clear other geometries
+            doc.Objects.Delete(alt.currentObjectsGuids, true);
+            alt.currentObjectsGuids = new List<Guid>();
+
             // clear heatmaps
-            alt.daylightMeshesIds.ForEach(guid => doc.Objects.Delete(guid, true));
+            doc.Objects.Delete(alt.daylightMeshesIds, true);
             alt.daylightMeshesIds = new List<Guid>();
+        }
+
+        /// <summary>
+        /// Links ref objects (such as loaded from a .json file) to geometric objects within a rhino document
+        /// </summary>
+        /// <param name="alt"></param>
+        /// <param name="doc"></param>
+        /// <returns></returns>
+        public static void Relink(Alternative alt, RhinoDoc doc)
+        {
+            try
+            {
+                alt.zone = (Curve)doc.Objects.FindId(alt.zoneGuid).Geometry;
+                alt.interiorWalls = alt.interiorWallsGuids.Select(guid => (Curve)doc.Objects.FindId(guid).Geometry).ToList();
+                alt.additionalBuildingGeometry = alt.additionalBuildingGeometryGuids.Select(guid => Brep.TryConvertBrep(doc.Objects.FindId(guid).Geometry)).ToList();
+                alt.context = alt.contextGuids.Select(guid => doc.Objects.FindId(guid).Geometry).ToList();
+            }
+            catch {
+
+                RhinoApp.WriteLine("Some gometries could not be found in the current document.");
+                // TODO: better error handling
+            }
         }
         public static string RandomHexString(int len)
         {
@@ -292,8 +325,6 @@ namespace DPredict.ViewModels
         }
 
         Alternative currentAlternative;
-        internal List<GeometryBase> context = new List<GeometryBase>();
-        internal List<Guid> contextGuids = new List<Guid>();
         internal string epcSpreadsheet = "";
         internal bool clippingState = false;
 
@@ -628,34 +659,14 @@ namespace DPredict.ViewModels
                 // ensure correct alt num is registered
                 UnicornPlugin.UIInterop.SetUniqueSessionAltNum(currentAlternative.data["num"].ToString());
 
-                Alternative alternative = LoadAlt(fileToLoad);
-
-                // Clean up geometery of old alternative
-                // TODO: check if zone/objects exist in doc and reference instead of create them
-                currentAlternative.currentObjectsGuids.ForEach(id => RhinoDoc.ActiveDoc.Objects.Delete(id, true));
-                currentAlternative.currentObjectsGuids.Clear();
-                //RhinoDoc.ActiveDoc.Objects.Delete(currentAlternative.zoneGuid, true); // this currently sets currentAlternative = null
-
+                Alternative alternative = LoadAlt(fileToLoad, relink: true);
+                RhinoDoc doc = RhinoDoc.ActiveDoc;
                 string num = currentAlternative.data["num"].ToString();
+                Alternative.Clear(currentAlternative, doc);
                 currentAlternative = alternative;
+                Alternative.Relink(currentAlternative, doc);
                 currentAlternative.data["num"] = num;
                 currentAlternative.data["name"] = "";
-
-                // update the guids to point to  zone and interior walls of the loaded alternative
-                currentAlternative.zoneGuid = RhinoDoc.ActiveDoc.Objects.Add(alternative.zone);
-                currentAlternative.interiorWallsGuids = new List<Guid>();
-                alternative.interiorWalls.ForEach(iw =>
-                {
-                    currentAlternative.interiorWallsGuids.Add(RhinoDoc.ActiveDoc.Objects.Add(iw));
-                });
-
-                for (int i = 0; i < currentAlternative.additionalBuildingGeometry.Count; ++i)
-                {
-                    if (RhinoDoc.ActiveDoc.Objects.FindId(currentAlternative.additionalBuildingGeometryGuids[i]) == null)
-                    {
-                        currentAlternative.additionalBuildingGeometryGuids[i] = RhinoDoc.ActiveDoc.Objects.Add(currentAlternative.additionalBuildingGeometry[i]);
-                    }
-                }
 
                 Curve geometry = alternative.zone;
                 //To set an initial wwrPerWall value
@@ -676,26 +687,12 @@ namespace DPredict.ViewModels
                 UnicornPlugin.UIInterop.SetNumWalls(wwrPerWall.Length);
                 UnicornPlugin.UIInterop.setWWRShadingPerWall(wwrPerWall, vShadingCountsPerWall, vShadingDepthsPerWall, hShadingCountsPerWall, hShadingDepthsPerWall, overhangsOffsetPerWall, overhangsDepthPerWall, vShadingOnOffPerWall, hShadingOnOffPerWall, overhangsOnOffPerWall);
 
-                await UpdateData(currentAlternative, "WWR_per_wall", wwrPerWall, true);
-                await UpdateData(currentAlternative, "interior_walls", alternative.interiorWalls, true);
-                await UpdateData(currentAlternative, "zone", geometry);
-                UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", true);
-                if (alternative.interiorWalls != null && alternative.interiorWalls.Count > 0)
-                {
-                    UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", true);
-                }
-                else
-                {
-                    UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
-                }
-                if (alternative.additionalBuildingGeometry != null && alternative.additionalBuildingGeometry.Count > 0)
-                {
-                    UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", true);
-                }
-                else
-                {
-                    UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", false);
-                }
+                UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", alternative.zone != null);
+                UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", 
+                    alternative.interiorWalls != null && alternative.interiorWalls.Where(x => x!=null).Count() > 0);
+                UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", 
+                    alternative.additionalBuildingGeometry != null && alternative.additionalBuildingGeometry.Where(x => x != null).Count() > 0);
+
                 UnicornPlugin.UIInterop.UpdateInputsData(currentAlternative.data);
                 try
                 {
@@ -713,13 +710,15 @@ namespace DPredict.ViewModels
                 {
                     RhinoApp.WriteLine("Failed loading epw file: {0}", ex.Message);
                 }
+
+                await UpdateData(currentAlternative, "ready", true, false, true, false);
             }
             else
             {
                 //TODO error notification : file not found
             }
         }
-        internal Alternative LoadAlt(string filepath)
+        internal Alternative LoadAlt(string filepath, bool relink)
         {
             string json = File.ReadAllText(filepath);
             Alternative alternative = JsonConvert.DeserializeObject<Alternative>(json, GeometryResolver.Settings);
@@ -1115,7 +1114,7 @@ namespace DPredict.ViewModels
                         Rhino.DocObjects.ObjRef[] objsRef = getter.Objects();
                         if (objsRef.Length > 0)
                         {
-                            contextGuids = objsRef.Select(oref => oref.ObjectId).ToList();
+                            currentAlternative.contextGuids = objsRef.Select(oref => oref.ObjectId).ToList();
 
                             // Access the selected object's geometry
                             List<GeometryBase> geometries = new List<GeometryBase>();
@@ -1332,7 +1331,7 @@ namespace DPredict.ViewModels
         {
 
             UnicornPlugin.UIInterop.Log(key + " " + newValue);
-
+            RhinoDoc doc = RhinoDoc.ActiveDoc;
             if (alt.data.ContainsKey(key) && (alt.data[key] != null && alt.data[key].Equals(newValue) && updateOnlyIfChanged))
             {
                 return null;
@@ -1343,7 +1342,7 @@ namespace DPredict.ViewModels
             }
             else if (key == "context")
             {
-                context = (List<GeometryBase>)newValue;
+                alt.context = (List<GeometryBase>)newValue;
             }
             else if (key == "interior_walls")
             {
@@ -1368,7 +1367,7 @@ namespace DPredict.ViewModels
                         userView.ActiveViewport.ZoomBoundingBox(alt.BoundingBox());
                     });
                 }
-                return await ComputeFromData(alt, context, loadToRhino);
+                return await ComputeFromData(alt, alt.context, loadToRhino);
             }
             else
             {
@@ -1732,7 +1731,7 @@ namespace DPredict.ViewModels
                         // add context guids as duplicate geometry
                         ObjectAttributes attributes = new ObjectAttributes();
                         attributes.ViewportId = parametricanalysisView.ActiveViewportID;
-                        guids.AddRange(context.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
+                        guids.AddRange(currentAlternative.context.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
                         guids.AddRange(benchmark.additionalBuildingGeometry.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
 
                         SwitchDaylightMesh(daylightMeshIndex, benchmark).Wait();
@@ -2360,12 +2359,12 @@ namespace DPredict.ViewModels
                         return;
                     }
 
-                    int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
+                    int indexOfContextPart = currentAlternative.contextGuids.IndexOf(e.ObjectId);
                     if (indexOfContextPart >= 0)
                     {
-                        context.RemoveAt(indexOfContextPart);
-                        UpdateData(currentAlternative, "context", context);
-                        if (context.Count == 0)
+                        currentAlternative.context.RemoveAt(indexOfContextPart);
+                        UpdateData(currentAlternative, "context", currentAlternative.context);
+                        if (currentAlternative.context.Count == 0)
                         {
                             UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
                         }
@@ -2377,7 +2376,7 @@ namespace DPredict.ViewModels
                     {
                         currentAlternative.additionalBuildingGeometry.RemoveAt(indexOfBuildingGeomPart);
                         UpdateData(currentAlternative, "building_geometry", currentAlternative.additionalBuildingGeometry);
-                        if (context.Count == 0)
+                        if (currentAlternative.context.Count == 0)
                         {
                             UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", false);
                         }
@@ -2417,15 +2416,15 @@ namespace DPredict.ViewModels
                     return;
                 }
 
-                int indexOfContextPart = contextGuids.IndexOf(e.RhinoObject.Id);
+                int indexOfContextPart = currentAlternative.contextGuids.IndexOf(e.RhinoObject.Id);
                 if (indexOfContextPart >= 0)
                 {
                     RhinoObject obj = RhinoDoc.ActiveDoc.Objects.Find(e.RhinoObject.Id);
                     bool flag = !GeometryBase.GeometryEquals(e.RhinoObject.Geometry, obj.Geometry);
                     if (flag)
                     {
-                        context[indexOfContextPart] = e.RhinoObject.Geometry;
-                        UpdateData(currentAlternative, "context", context);
+                        currentAlternative.context[indexOfContextPart] = e.RhinoObject.Geometry;
+                        UpdateData(currentAlternative, "context", currentAlternative.context);
                     }
                     return;
                 }
@@ -2585,12 +2584,12 @@ namespace DPredict.ViewModels
                     return;
                 }
 
-                int indexOfContextPart = contextGuids.IndexOf(e.ObjectId);
+                int indexOfContextPart = currentAlternative.contextGuids.IndexOf(e.ObjectId);
                 if (indexOfContextPart >= 0)
                 {
                     replacedObjectGuids.Add(e.ObjectId);
-                    context[indexOfContextPart] = e.NewRhinoObject.Geometry;
-                    UpdateData(currentAlternative, "context", context);
+                    currentAlternative.context[indexOfContextPart] = e.NewRhinoObject.Geometry;
+                    UpdateData(currentAlternative, "context", currentAlternative.context);
                     return;
                 }
 
@@ -2783,7 +2782,7 @@ namespace DPredict.ViewModels
 
         internal void HighlightContext(bool highlight)
         {
-            contextGuids.ForEach(contextGuid =>
+            currentAlternative.contextGuids.ForEach(contextGuid =>
             {
                 RhinoObject obj = RhinoDoc.ActiveDoc.Objects.FindId(contextGuid);
                 if (obj != null)
