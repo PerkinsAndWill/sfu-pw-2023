@@ -701,6 +701,8 @@ namespace DPredict.ViewModels
                     alternative.interiorWalls != null && alternative.interiorWalls.Where(x => x!=null).Count() > 0);
                 UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", 
                     alternative.additionalBuildingGeometry != null && alternative.additionalBuildingGeometry.Where(x => x != null).Count() > 0);
+                UnicornPlugin.UIInterop.UpdateUIData("isContextSet",
+                    alternative.context != null && alternative.context.Where(x => x != null).Count() > 0);
 
                 UnicornPlugin.UIInterop.UpdateInputsData(currentAlternative.data);
                 try
