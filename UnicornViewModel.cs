@@ -1085,6 +1085,8 @@ namespace DPredict.ViewModels
                         RhinoDoc.ActiveDoc.Views.Redraw();
                         UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", false);
                         UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
+                        UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", false);
+                        UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
                     }
                     else
                     {
