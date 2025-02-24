@@ -918,7 +918,21 @@ namespace DPredict.ViewModels
 
         private void InitDoc(object sender, DocumentOpenEventArgs e)
         {
-            Rhino.RhinoDoc.ActiveDoc.AdjustModelUnitSystem(UnitSystem.Meters, false);
+            if (currentAlternative != null && currentAlternative.zoneGuid != null)
+            {
+                Alternative.Clear(currentAlternative, RhinoDoc.ActiveDoc);
+                RhinoDoc.ActiveDoc.Views.Redraw();
+                try
+                {
+                    UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", false);
+                    UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
+                    UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", false);
+                    UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
+                }
+                catch (Exception ex) {
+                    Console.WriteLine(ex.Message + "\n");
+                }
+            }
         }
 
         internal void InitDataOnView()
