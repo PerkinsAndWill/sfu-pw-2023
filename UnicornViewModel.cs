@@ -202,21 +202,25 @@ namespace DPredict.ViewModels
         /// </summary>
         /// <param name="alt"></param>
         /// <param name="doc"></param>
-        /// <returns></returns>
-        public static void Relink(Alternative alt, RhinoDoc doc)
+        /// <returns>true on success, false if one or more geometries could not be loaded. </returns>
+        public static bool Relink(Alternative alt, RhinoDoc doc)
         {
             try
             {
-                alt.zone = (Curve)doc.Objects.FindId(alt.zoneGuid).Geometry;
-                alt.interiorWalls = alt.interiorWallsGuids.Select(guid => (Curve)doc.Objects.FindId(guid).Geometry).ToList();
-                alt.additionalBuildingGeometry = alt.additionalBuildingGeometryGuids.Select(guid => Brep.TryConvertBrep(doc.Objects.FindId(guid).Geometry)).ToList();
-                alt.context = alt.contextGuids.Select(guid => doc.Objects.FindId(guid).Geometry).ToList();
+                alt.zone = (Curve)doc.Objects.FindGeometry(alt.zoneGuid);
+                alt.interiorWalls = alt.interiorWallsGuids.Select(guid => (Curve)doc.Objects.FindGeometry(guid)).ToList();
+                alt.additionalBuildingGeometry = alt.additionalBuildingGeometryGuids.Select(guid => Brep.TryConvertBrep(doc.Objects.FindGeometry(guid))).ToList();
+                alt.context = alt.contextGuids.Select(guid => doc.Objects.FindGeometry(guid)).ToList();
             }
-            catch {
+            catch (Exception ex) {
 
-                RhinoApp.WriteLine("Some gometries could not be found in the current document.");
-                // TODO: better error handling
+                RhinoApp.WriteLine(ex.ToString());
             }
+            if (alt.zone == null || alt.interiorWalls.Contains(null) || alt.additionalBuildingGeometry.Contains(null)  || alt.context.Contains(null))
+            {
+                return false;
+            }
+            return true;
         }
         public static string RandomHexString(int len)
         {
@@ -326,7 +330,7 @@ namespace DPredict.ViewModels
 
         Alternative currentAlternative;
         internal string epcSpreadsheet = "";
-        internal bool clippingState = false;
+        internal bool clippingState = true;
 
         DateTime lastRequestDate;
 
@@ -637,6 +641,7 @@ namespace DPredict.ViewModels
                         if (cPlaneGuid != Guid.Empty)
                         {
                             doc.Objects.Delete(cPlaneGuid, true);
+                            doc.Views.Redraw();
                         }
 
                         UnicornPlugin.UIInterop.UpdateAlts();
@@ -664,7 +669,11 @@ namespace DPredict.ViewModels
                 string num = currentAlternative.data["num"].ToString();
                 Alternative.Clear(currentAlternative, doc);
                 currentAlternative = alternative;
-                Alternative.Relink(currentAlternative, doc);
+                if (!Alternative.Relink(currentAlternative, doc))
+                {
+                    RhinoApp.WriteLine("Attention: One or more geometries could not be loaded into the project.");
+                }
+
                 currentAlternative.data["num"] = num;
                 currentAlternative.data["name"] = "";
 
@@ -788,6 +797,8 @@ namespace DPredict.ViewModels
             RhinoDoc.DeselectObjects += OnSelectObjects;
             RhinoDoc.EndOpenDocument += InitDoc;
             RhinoDoc.EndOpenDocumentInitialViewUpdate += (sender, e) => { InitViews(); };
+            RhinoDoc.BeginSaveDocument += (sender, e) => { TempClearClippingPlance(); };
+            RhinoDoc.EndSaveDocument += (sender, e) => { RestoreClippingPlane(); };
             RhinoApp.Closing += CloseExcelAndDelete;
             Rhino.UI.Panels.Show += OnShowPanel;
 
@@ -1463,16 +1474,47 @@ namespace DPredict.ViewModels
 
         private Guid mainViewClippingPlaneGuid = Guid.Empty;
 
+        double clippingHeight = 0.0;
+        internal void TempClearClippingPlance()
+        {
+            RhinoDoc doc = RhinoDoc.ActiveDoc;
+
+            if (mainViewClippingPlaneGuid != Guid.Empty && doc != null)
+            {
+                    ObjRef oRef = new ObjRef(doc, mainViewClippingPlaneGuid);
+                    ClippingPlaneSurface cps = oRef.ClippingPlaneSurface();
+                    if (cps != null && currentAlternative != null)
+                    {
+                        clippingHeight = cps.Plane.OriginZ - currentAlternative.zone.GetBoundingBox(Plane.WorldXY).Center.Z;
+                    }
+
+                    doc.Objects.Delete(mainViewClippingPlaneGuid, true);
+                    mainViewClippingPlaneGuid = Guid.Empty;
+            }
+        }
+
+        internal void RestoreClippingPlane()
+        {
+            RhinoDoc doc = RhinoDoc.ActiveDoc;
+            if (doc != null && !doc.IsClosing && clippingState && currentAlternative != null && currentAlternative.zone != null && userView != null)
+            {
+                Clip(currentAlternative.zone, userView.ActiveViewportID, ref mainViewClippingPlaneGuid, true, clippingHeight);
+            }
+        }
+
         internal void Clip(bool enable)
         {
             RhinoDoc doc = RhinoDoc.ActiveDoc;
-            if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
-                            doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
+            if (doc != null)
             {
-                userView = doc.Views.ActiveView;
+                if (doc.Views.ActiveView != null && doc.Views.ActiveView.ActiveViewport.Name != "CustomView" &&
+                                doc.Views.ActiveView.ActiveViewport.Name != "ParametricAnalysisView")
+                {
+                    userView = doc.Views.ActiveView;
+                }
+                Guid viewportGuid = (userView != null ? userView : doc.Views.GetViewList(true, false)[0]).ActiveViewportID;
+                ClipInViewport(enable, viewportGuid, ref mainViewClippingPlaneGuid);
             }
-            Guid viewportGuid = (userView != null ? userView : doc.Views.GetViewList(true, false)[0]).ActiveViewportID;
-            ClipInViewport(enable, viewportGuid, ref mainViewClippingPlaneGuid);
         }
 
         internal void ClipInViewport(bool enable, Guid viewportGuid, ref Guid clippingPlaneGuid)
@@ -1509,7 +1551,7 @@ namespace DPredict.ViewModels
                 cps = oRef.ClippingPlaneSurface();
                 if (cps != null)
                 {
-                    center.Z = cps.Plane.OriginZ;
+                    center.Z = cps.Plane.OriginZ;  // TODO: this prob doesn't make sense in the current setup
                 }
                 doc.Objects.Delete(clippingPlaneGuid, true);
             }
