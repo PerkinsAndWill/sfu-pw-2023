@@ -312,6 +312,7 @@ namespace DPredict.ViewModels
 
         private string ImageToBase64String(Bitmap bitmap)
         {
+            if (bitmap == null) return null;
 
             MemoryStream ms = new MemoryStream();
 
