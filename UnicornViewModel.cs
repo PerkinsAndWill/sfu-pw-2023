@@ -167,6 +167,16 @@ namespace DPredict.ViewModels
 
         public static void Clear(Alternative alt, RhinoDoc doc, bool clearDoc = true)
         {
+            // doc objects
+            if (doc != null && clearDoc)
+            {
+                int countD = doc.Objects.Delete(alt.currentObjectsGuids, true);
+                if (countD != alt.currentObjectsGuids.Count)
+                {
+                    Debug.WriteLine(String.Format("CurrentObjects: could not delete {0} objects\n", alt.currentObjectsGuids.Count - countD));
+                }
+            }
+
             // clear zone
             alt.zone = null;
             alt.zoneGuid = Guid.Empty;
@@ -192,14 +202,6 @@ namespace DPredict.ViewModels
 
             // clear heatmaps
             alt.daylightMeshesIds = new List<Guid>();
-
-            // doc objects
-            if (doc != null && clearDoc)
-            {
-                doc.Objects.Delete(alt.wallsGuid, true);
-                doc.Objects.Delete(alt.currentObjectsGuids, true);
-                doc.Objects.Delete(alt.daylightMeshesIds, true);
-            }
         }
 
         /// <summary>
@@ -2071,11 +2073,11 @@ namespace DPredict.ViewModels
                 {
                     RhinoDoc doc = RhinoDoc.ActiveDoc;
 
-                    alt.currentObjectsGuids.ForEach(id =>
+                    int countD = doc.Objects.Delete(alt.currentObjectsGuids, true);
+                    if (countD != alt.currentObjectsGuids.Count)
                     {
-                        Rhino.DocObjects.ObjRef objRef = new Rhino.DocObjects.ObjRef(doc, id);
-                        doc.Objects.Delete(objRef, true, true); 
-                    });
+                        Debug.WriteLine(String.Format("Could not delete {0} objects\n", alt.currentObjectsGuids.Count-countD));
+                    }
                     alt.currentObjectsGuids.Clear();
 
 
