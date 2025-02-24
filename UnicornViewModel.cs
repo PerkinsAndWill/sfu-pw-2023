@@ -165,7 +165,7 @@ namespace DPredict.ViewModels
         internal List<Guid> daylightMeshesIds = new List<Guid>();
         internal int currentDaylightMeshIndex = 0;
 
-        public static void Clear(Alternative alt, RhinoDoc doc)
+        public static void Clear(Alternative alt, RhinoDoc doc, bool clearDoc = true)
         {
             // clear zone
             alt.zone = null;
@@ -184,17 +184,22 @@ namespace DPredict.ViewModels
             alt.contextGuids = new List<Guid>();
 
             // clear exterior walls (generated)
-            doc.Objects.Delete(alt.wallsGuid, true);
             alt.walls = new List<Brep>();
             alt.wallsGuid = new List<Guid>();
 
             // clear other geometries
-            doc.Objects.Delete(alt.currentObjectsGuids, true);
             alt.currentObjectsGuids = new List<Guid>();
 
             // clear heatmaps
-            doc.Objects.Delete(alt.daylightMeshesIds, true);
             alt.daylightMeshesIds = new List<Guid>();
+
+            // doc objects
+            if (doc != null && clearDoc)
+            {
+                doc.Objects.Delete(alt.wallsGuid, true);
+                doc.Objects.Delete(alt.currentObjectsGuids, true);
+                doc.Objects.Delete(alt.daylightMeshesIds, true);
+            }
         }
 
         /// <summary>
