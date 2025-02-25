@@ -805,7 +805,9 @@ namespace DPredict.ViewModels
             RhinoDoc.SelectObjects += OnSelectObjects;
             RhinoDoc.DeselectAllObjects += DeselectAllObjects;
             RhinoDoc.DeselectObjects += OnSelectObjects;
+            RhinoDoc.EndOpenDocument += SetupDir;
             RhinoDoc.EndOpenDocument += InitDoc;
+            RhinoDoc.CloseDocument += ResetDir;
             RhinoDoc.EndOpenDocumentInitialViewUpdate += (sender, e) => { InitViews(); };
             RhinoDoc.BeginSaveDocument += (sender, e) => { TempClearClippingPlance(); };
             RhinoDoc.EndSaveDocument += (sender, e) => { RestoreClippingPlane(); };
@@ -844,6 +846,24 @@ namespace DPredict.ViewModels
 
             InitEpcSpreadsheet();
         }
+
+        private void ResetDir(object sender, DocumentEventArgs e)
+        {
+            UnicornPlugin.Instance.UpdateDataPath(null);
+            UnicornPlugin.UIInterop.UpdateAlts();
+        }
+
+        private void SetupDir(object sender, DocumentOpenEventArgs e)
+        {
+            string localDataDir = null;
+            if (e.FileName != null && !e.FileName.Contains("AppData") && !e.FileName.Contains("Template"))
+            {
+                localDataDir = e.FileName.Replace(".3dm", "-DPredictData");
+            }
+            UnicornPlugin.Instance.UpdateDataPath(localDataDir);
+            UnicornPlugin.UIInterop.UpdateAlts();
+        }
+
         static int glassMaterialIndex = 0;
 
         private void InitEpcSpreadsheet()

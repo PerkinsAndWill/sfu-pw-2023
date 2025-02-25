@@ -122,14 +122,21 @@ namespace DPredict
             return base.OnLoad(ref errorMessage);
         }
 
+        private string dPredictDataPath = "C:\\DPredict\\data\\";
+        private string localDataPath;
+        public void UpdateDataPath(string localPath)
+        {
+            localDataPath = localPath;
+        }
+
         public string GetDataFolderPath()
         {
-            string dPredictdatalPath = "C:\\DPredict\\data\\";
-            if (!Directory.Exists(dPredictdatalPath))
+            string dataPath = localDataPath == null ? dPredictDataPath : localDataPath;
+            if (!Directory.Exists(dataPath))
             {
-                Directory.CreateDirectory(dPredictdatalPath);
+                Directory.CreateDirectory(dataPath);
             }
-            return dPredictdatalPath;
+            return dataPath;
         }
 
         protected override void OnShutdown()
