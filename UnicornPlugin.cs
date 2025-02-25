@@ -122,7 +122,7 @@ namespace DPredict
             return base.OnLoad(ref errorMessage);
         }
 
-        private string dPredictDataPath = "C:\\DPredict\\data\\";
+        private string dPredictDataPath = "C:\\DPredict\\data";
         private string localDataPath;
         public void UpdateDataPath(string localPath)
         {

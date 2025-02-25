@@ -156,7 +156,9 @@ namespace DPredict.ViewModels
         internal List<Guid> contextGuids = new List<Guid>();
 
         // generated
+        [JsonProperty]
         internal List<Guid> currentObjectsGuids = new List<Guid>();
+
         internal List<Guid> wallsGuid = new List<Guid>();
         internal List<Brep> walls = new List<Brep>();
         internal Mesh currentlySelectedWall;
@@ -535,7 +537,7 @@ namespace DPredict.ViewModels
                         Bitmap bm = parametricanalysisView.CaptureToBitmap(new Size(parametricanalysisView.ActiveViewport.Size.Width, parametricanalysisView.ActiveViewport.Size.Height), displaymode);
 
 
-                        string savingFolder = UnicornPlugin.Instance.GetDataFolderPath() + subfolder;
+                        string savingFolder = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), subfolder);
                         if (!Directory.Exists(savingFolder))
                         {
                             Directory.CreateDirectory(savingFolder);
@@ -575,7 +577,7 @@ namespace DPredict.ViewModels
             });
         }
 
-        internal Task SaveCustomViewAlt(List<Guid> objectGuids, Curve zone, string name, bool isAutomatedSave = false)
+        internal Task SaveCustomViewAlt(List<Guid> objectGuids, Curve zone, string name, bool isAutomatedSave = false, bool registerAsCurrent=false)
         {
            
             return Task.Run(() =>
@@ -625,6 +627,10 @@ namespace DPredict.ViewModels
                         if (!isAutomatedSave) // save as a copy
                         {
                             currentAlternative.data["num"] = Alternative.RandomHexString(5);
+                            if (registerAsCurrent)
+                            {
+                                LogAltAsCurrent(currentAlternative);
+                            }
                         }
                         currentAlternative.data["name"] = name;
                         currentAlternative.timestamp = DateTime.Now.ToString();
@@ -632,11 +638,6 @@ namespace DPredict.ViewModels
                         string json = JsonConvert.SerializeObject(currentAlternative, GeometryResolver.Settings);
 
                         string savingFolder = UnicornPlugin.Instance.GetDataFolderPath();
-                        if (!Directory.Exists(savingFolder))
-                        {
-                            Directory.CreateDirectory(savingFolder);
-                        }
-
                         string altFileName = currentAlternative.data["num"].ToString();
                         string combined = Path.Combine(savingFolder, altFileName + ".json");
                         File.WriteAllText(combined, json);
@@ -663,43 +664,54 @@ namespace DPredict.ViewModels
         }
 
 
-        async internal void LoadAltAsCurrent(string name, string subfolder = "")
+        async internal void LoadAltAsCurrent(string name, bool compute = true, string subfolder = "", bool overwrite = false)
         {
 
             string fileToLoad = Path.Combine(Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), subfolder), name + ".json");
             if (File.Exists(fileToLoad))
             {
-                // ensure correct alt num is registered
-                UnicornPlugin.UIInterop.SetUniqueSessionAltNum(currentAlternative.data["num"].ToString());
-
                 Alternative alternative = LoadAlt(fileToLoad, relink: true);
                 RhinoDoc doc = RhinoDoc.ActiveDoc;
                 string num = currentAlternative.data["num"].ToString();
                 Alternative.Clear(currentAlternative, doc);
-                currentAlternative = alternative;
-                if (!Alternative.Relink(currentAlternative, doc))
+                if (!Alternative.Relink(alternative, doc))
                 {
-                    RhinoApp.WriteLine("Attention: One or more geometries could not be loaded into the project.");
-                }
+                    RhinoApp.WriteLine(String.Format("Attention: One or more geometries could not be loaded into the project. Aborted loading alt No {0}",
+                        alternative.data["num"]));
 
-                currentAlternative.data["num"] = num;
-                currentAlternative.data["name"] = "";
+                    // abort
+                    Alternative.Clear(alternative, doc);
+                    UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", false);
+                    UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
+                    UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", false);
+                    UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
+
+                    return;
+                }
+                RhinoApp.WriteLine(String.Format("Loaded alternative '{0}' (id:{1})", alternative.data["name"], alternative.data["num"]));
+                currentAlternative = alternative;
+                if (!overwrite)
+                {
+                    currentAlternative.data["num"] = num;
+                    currentAlternative.data["name"] = "";
+                }
+                UnicornPlugin.UIInterop.SetUniqueSessionAltNum(currentAlternative.data["num"].ToString());
 
                 Curve geometry = alternative.zone;
                 //To set an initial wwrPerWall value
-                double[] wwrPerWall = ((JArray)alternative.data["WWR_per_wall"]).ToObject<double[]>();
+                double[] wwrPerWall = (double[])alternative.data["WWR_per_wall"];
 
-                int[] vShadingCountsPerWall = ((JArray)alternative.data["verticalShadings_multiplier"]).ToObject<int[]>();
-                double[] vShadingDepthsPerWall = ((JArray)alternative.data["verticalShadings_depth"]).ToObject<double[]>();
-                int[] hShadingCountsPerWall = ((JArray)alternative.data["horizontalShadings_multiplier"]).ToObject<int[]>();
-                double[] hShadingDepthsPerWall = ((JArray)alternative.data["horizontalShadings_depth"]).ToObject<double[]>();
-                double[] overhangsOffsetPerWall = ((JArray)alternative.data["overhangs_offset"]).ToObject<double[]>();
-                double[] overhangsDepthPerWall = ((JArray)alternative.data["overhangs_depth"]).ToObject<double[]>();
+                int[] vShadingCountsPerWall = (int[])alternative.data["verticalShadings_multiplier"];
+                double[] vShadingDepthsPerWall = (double[])alternative.data["verticalShadings_depth"];
+                int[] hShadingCountsPerWall = (int[])alternative.data["horizontalShadings_multiplier"];
+                double[] hShadingDepthsPerWall = (double[])alternative.data["horizontalShadings_depth"];
+                double[] overhangsOffsetPerWall = (double[])alternative.data["overhangs_offset"];
+                double[] overhangsDepthPerWall = (double[])alternative.data["overhangs_depth"];
 
 
-                int[] vShadingOnOffPerWall = ((JArray)alternative.data["verticalFnOnOff"]).ToObject<int[]>();
-                int[] hShadingOnOffPerWall = ((JArray)alternative.data["horizontalFnOnOff"]).ToObject<int[]>();
-                int[] overhangsOnOffPerWall = ((JArray)alternative.data["overhangsOnOff"]).ToObject<int[]>();
+                int[] vShadingOnOffPerWall = (int[])alternative.data["verticalFnOnOff"];
+                int[] hShadingOnOffPerWall = (int[])alternative.data["horizontalFnOnOff"];
+                int[] overhangsOnOffPerWall = (int[])alternative.data["overhangsOnOff"];
 
                 UnicornPlugin.UIInterop.SetNumWalls(wwrPerWall.Length);
                 UnicornPlugin.UIInterop.setWWRShadingPerWall(wwrPerWall, vShadingCountsPerWall, vShadingDepthsPerWall, hShadingCountsPerWall, hShadingDepthsPerWall, overhangsOffsetPerWall, overhangsDepthPerWall, vShadingOnOffPerWall, hShadingOnOffPerWall, overhangsOnOffPerWall);
@@ -729,8 +741,10 @@ namespace DPredict.ViewModels
                 {
                     RhinoApp.WriteLine("Failed loading epw file: {0}", ex.Message);
                 }
-
-                await UpdateData(currentAlternative, "ready", true, false, true, false);
+                if (compute)
+                {
+                    await UpdateData(currentAlternative, "ready", true, false, true, false);
+                }
             }
             else
             {
@@ -741,11 +755,46 @@ namespace DPredict.ViewModels
         {
             string json = File.ReadAllText(filepath);
             Alternative alternative = JsonConvert.DeserializeObject<Alternative>(json, GeometryResolver.Settings);
+            Dictionary<string, object> data = new Dictionary<string, object>();
+            foreach (KeyValuePair<string, object> keyvaluePair in alternative.data)
+            {
+                string key = keyvaluePair.Key;
+                object value = keyvaluePair.Value;
+                object res = null;
+                if (key == "WWR_per_wall" || key == "verticalShadings_depth" || key == "horizontalShadings_depth" || key == "overhangs_offset" || key == "overhangs_depth")
+                {
+                    try
+                    {
+                        res = ((JArray)value).ToObject<double[]>();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.WriteLine(e);
+                    }
+                }
+                else if (key == "verticalShadings_multiplier" || key == "horizontalShadings_multiplier" || key == "verticalFnOnOff" || key == "horizontalFnOnOff" || key == "overhangsOnOff")
+                {
+                    try
+                    {
+                        res = ((JArray)value).ToObject<int[]>();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.WriteLine(e);
+                    }
+                }
+                else //remaining are primitives that don't need casting back
+                {
+                    res = value;
+                }
+                data[key] = res;
+            }
+            alternative.data = data;
             return alternative;
         }
         internal void DeleteAlt(string name)
         {
-            string fileToDelete = UnicornPlugin.Instance.GetDataFolderPath() + name + ".json";
+            string fileToDelete = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), name + ".json");
             if (File.Exists(fileToDelete))
             {
                 File.Delete(fileToDelete);
@@ -755,7 +804,9 @@ namespace DPredict.ViewModels
 
         internal string GetAlts()
         {
-            IOrderedEnumerable<string> altFiles = Directory.GetFiles(UnicornPlugin.Instance.GetDataFolderPath(), "*.json").OrderByDescending(d => new FileInfo(d).CreationTime);
+            IOrderedEnumerable<string> altFiles = Directory.GetFiles(UnicornPlugin.Instance.GetDataFolderPath(), "*.json")
+                .Where(file => { Alternative alt = LoadAlt(file, relink: false); return alt.data["name"].ToString() != "autoSave"; })
+                .OrderByDescending(d => new FileInfo(d).CreationTime);
             return "[" + String.Join(",", altFiles.Select(fn => File.ReadAllText(fn))) + "]";
         }
         internal string GetCurrentAlt()
@@ -805,12 +856,12 @@ namespace DPredict.ViewModels
             RhinoDoc.SelectObjects += OnSelectObjects;
             RhinoDoc.DeselectAllObjects += DeselectAllObjects;
             RhinoDoc.DeselectObjects += OnSelectObjects;
-            RhinoDoc.EndOpenDocument += SetupDir;
             RhinoDoc.EndOpenDocument += InitDoc;
-            RhinoDoc.CloseDocument += ResetDir;
+            RhinoDoc.CloseDocument += ResetDPredict;
             RhinoDoc.EndOpenDocumentInitialViewUpdate += (sender, e) => { InitViews(); };
             RhinoDoc.BeginSaveDocument += (sender, e) => { TempClearClippingPlance(); };
             RhinoDoc.EndSaveDocument += (sender, e) => { RestoreClippingPlane(); };
+            RhinoDoc.EndSaveDocument += LogCurrentAlt;
             RhinoApp.Closing += CloseExcelAndDelete;
             Rhino.UI.Panels.Show += OnShowPanel;
 
@@ -842,26 +893,75 @@ namespace DPredict.ViewModels
                 SetBuildingGeometry(bgeom);
             };
 
-            InitDataOnView();
-
             InitEpcSpreadsheet();
         }
 
-        private void ResetDir(object sender, DocumentEventArgs e)
+        private void LogCurrentAlt(object sender, DocumentSaveEventArgs e)
         {
-            UnicornPlugin.Instance.UpdateDataPath(null);
-            UnicornPlugin.UIInterop.UpdateAlts();
+            SaveCustomViewAlt(currentAlternative.currentObjectsGuids, currentAlternative.zone, "autoSave", isAutomatedSave: false, registerAsCurrent: true);
         }
 
-        private void SetupDir(object sender, DocumentOpenEventArgs e)
+        private void LogAltAsCurrent(Alternative alternative)
         {
-            string localDataDir = null;
-            if (e.FileName != null && !e.FileName.Contains("AppData") && !e.FileName.Contains("Template"))
+            string logPath = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), "currentID.txt");
+            using (StreamWriter sw = new StreamWriter(logPath))
             {
-                localDataDir = e.FileName.Replace(".3dm", "-DPredictData");
+                sw.WriteLine(alternative.data["num"].ToString(), FileMode.Create);
             }
-            UnicornPlugin.Instance.UpdateDataPath(localDataDir);
+        }
+
+        public static string GetLastModifiedFile(string directoryPath)
+        {
+            IEnumerable<FileInfo> allFiles = new DirectoryInfo(directoryPath).EnumerateFiles();
+            if (allFiles.Count() > 0)
+            {
+                return allFiles.OrderBy(fi => fi.LastWriteTime).Last().FullName;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public static string GetLastSavedFile()
+        {
+            string num = null;
+            string logPath = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), "currentID.txt");
+            if (File.Exists(logPath))
+            {
+                using (StreamReader sr = new StreamReader(logPath))
+                {
+                    num = sr.ReadLine();
+                }
+            }
+            return num;
+        }
+
+        private void RelinkCurrentAlt()
+        {
+            string filePath = GetLastSavedFile();
+            if (filePath != null) {
+                currentAlternative = new Alternative();
+                SaveCurrentAlt(currentAlternative.data["name"].ToString(), true);
+                LoadAltAsCurrent(Path.GetFileName(filePath).Replace(".json", ""), compute: false, subfolder: "", overwrite: false);
+            }
+        }
+
+        private void ResetDPredict(object sender, DocumentEventArgs e)
+        {
+            // clear previous session
+            if (currentAlternative != null && currentAlternative.zoneGuid != null)
+            {
+                Alternative.Clear(currentAlternative, RhinoDoc.ActiveDoc);
+            }
+
+            UnicornPlugin.Instance.UpdateDataPath(null);
             UnicornPlugin.UIInterop.UpdateAlts();
+
+            UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", false);
+            UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
+            UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", false);
+            UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
         }
 
         static int glassMaterialIndex = 0;
@@ -946,21 +1046,22 @@ namespace DPredict.ViewModels
 
         private void InitDoc(object sender, DocumentOpenEventArgs e)
         {
-            if (currentAlternative != null && currentAlternative.zoneGuid != null)
+            currentAlternative = new Alternative();
+
+            // point to correct dirs
+            string localDataDir = null;
+            if (e.FileName != null && !e.FileName.Contains("AppData") && !e.FileName.Contains("Template"))
             {
-                Alternative.Clear(currentAlternative, RhinoDoc.ActiveDoc);
-                RhinoDoc.ActiveDoc.Views.Redraw();
-                try
-                {
-                    UnicornPlugin.UIInterop.UpdateUIData("isZoneSet", false);
-                    UnicornPlugin.UIInterop.UpdateUIData("isInteriorWallsSet", false);
-                    UnicornPlugin.UIInterop.UpdateUIData("isBuildingGeometrySet", false);
-                    UnicornPlugin.UIInterop.UpdateUIData("isContextSet", false);
-                }
-                catch (Exception ex) {
-                    Console.WriteLine(ex.Message + "\n");
-                }
+                localDataDir = e.FileName.Replace(".3dm", "-DPredictData");
             }
+            UnicornPlugin.Instance.UpdateDataPath(localDataDir);
+
+            if (localDataDir != null)
+            {
+                // load working alt file
+                RelinkCurrentAlt();
+            }
+            UnicornPlugin.UIInterop.UpdateAlts();
         }
 
         internal void InitDataOnView()
@@ -1386,51 +1487,57 @@ namespace DPredict.ViewModels
 
         async private Task<List<GrasshopperDataTree>> UpdateData(Alternative alt, string key, object newValue, bool silent = false, bool loadToRhino = true, bool updateOnlyIfChanged = true)
         {
-
-            UnicornPlugin.UIInterop.Log(key + " " + newValue);
-            RhinoDoc doc = RhinoDoc.ActiveDoc;
-            if (alt.data.ContainsKey(key) && (alt.data[key] != null && alt.data[key].Equals(newValue) && updateOnlyIfChanged))
+            try
             {
-                return null;
-            }
-            if (key == "zone")
-            {
-                alt.zone = (Curve)newValue;
-            }
-            else if (key == "context")
-            {
-                alt.context = (List<GeometryBase>)newValue;
-            }
-            else if (key == "interior_walls")
-            {
-                alt.interiorWalls = ((IEnumerable)newValue).Cast<Curve>().ToList();
-            }
-            else if (key == "building_geometry")
-            {
-                alt.additionalBuildingGeometry = ((IEnumerable)newValue).Cast<GeometryBase>().ToList().Select(geo => Brep.TryConvertBrep(geo)).ToList();
-            }
-            else
-            {
-                alt.data[key] = newValue;
-            }
-
-            if (!silent)
-            {
-                if (key == "zone" && loadToRhino)
+                UnicornPlugin.UIInterop.Log(key + " " + newValue);
+                RhinoDoc doc = RhinoDoc.ActiveDoc;
+                if (alt.data.ContainsKey(key) && (alt.data[key] != null && alt.data[key].Equals(newValue) && updateOnlyIfChanged))
                 {
-                    RhinoApp.InvokeOnUiThread((Action)delegate
-                    {
-                        UpdateUserView();
-                        userView.ActiveViewport.ZoomBoundingBox(alt.BoundingBox());
-                    });
+                    return null;
                 }
-                return await ComputeFromData(alt, alt.context, loadToRhino);
+                if (key == "zone")
+                {
+                    alt.zone = (Curve)newValue;
+                }
+                else if (key == "context")
+                {
+                    alt.context = (List<GeometryBase>)newValue;
+                }
+                else if (key == "interior_walls")
+                {
+                    alt.interiorWalls = ((IEnumerable)newValue).Cast<Curve>().ToList();
+                }
+                else if (key == "building_geometry")
+                {
+                    alt.additionalBuildingGeometry = ((IEnumerable)newValue).Cast<GeometryBase>().ToList().Select(geo => Brep.TryConvertBrep(geo)).ToList();
+                }
+                else
+                {
+                    alt.data[key] = newValue;
+                }
+
+                if (!silent)
+                {
+                    if (key == "zone" && loadToRhino)
+                    {
+                        RhinoApp.InvokeOnUiThread((Action)delegate
+                        {
+                            UpdateUserView();
+                            userView.ActiveViewport.ZoomBoundingBox(alt.BoundingBox());
+                        });
+                    }
+                    return await ComputeFromData(alt, alt.context, loadToRhino);
+                }
+                else
+                {
+                    return null;
+                }
             }
-            else
+            catch (Exception e)
             {
+                Debug.WriteLine(e.Message); 
                 return null;
             }
-
         }
 
 
@@ -1443,7 +1550,7 @@ namespace DPredict.ViewModels
             }
 
             //load csv data
-            string analysisFile = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder + "\\" + analysisName + "\\data.csv";
+            string analysisFile = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), parametricAnalysisFolder, analysisName, "data.csv");
             if (File.Exists(analysisFile) && Directory.GetParent(analysisFile).GetFiles().Length > 1)
             {
                 var csv = File.ReadAllText(analysisFile);
@@ -1462,7 +1569,7 @@ namespace DPredict.ViewModels
         internal void OpenAnalysisFolder()
         {
             string subfolder = parametricAnalysisFolder;
-            string analysisFolder = UnicornPlugin.Instance.GetDataFolderPath() + subfolder;
+            string analysisFolder = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), subfolder);
             if (Directory.Exists(analysisFolder))
             {
                 ProcessStartInfo psi = new ProcessStartInfo();
@@ -1474,7 +1581,7 @@ namespace DPredict.ViewModels
 
         internal string[] GetAnalysisFolders()
         {
-            string analysisFolder = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder;
+            string analysisFolder = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), parametricAnalysisFolder);
             if (!Directory.Exists(analysisFolder))
             {
                 Directory.CreateDirectory(analysisFolder);
@@ -1657,9 +1764,10 @@ namespace DPredict.ViewModels
             UnicornPlugin.UIInterop.UpdateParametricAnalysisProgress(0, samples.Count, false);
 
             List<string> altNames = new List<string>();
-            string analysisSubfolder = parametricAnalysisFolder + "/" + DateTime.Now.Year + "-" + DateTime.Now.Month + "-" + DateTime.Now.Day + "_" + DateTime.Now.Hour + "." + DateTime.Now.Minute;
+            string analysisSubfolder = Path.Combine(parametricAnalysisFolder, String.Format("{0:0000}-{1:00}-{2:00}_{3:00}.{4:00}", 
+                DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, DateTime.Now.Hour, DateTime.Now.Minute));
 
-            string parentAnalysisFolder = UnicornPlugin.Instance.GetDataFolderPath() + parametricAnalysisFolder;
+            string parentAnalysisFolder = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), parametricAnalysisFolder);
             if (!Directory.Exists(parentAnalysisFolder))
             {
                 Directory.CreateDirectory(parentAnalysisFolder);
