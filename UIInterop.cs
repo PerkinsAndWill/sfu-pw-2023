@@ -277,10 +277,6 @@ namespace DPredict
             return JsonConvert.SerializeObject(ViewModel.GetAnalysisFolders(), jsonSettings);
         }
 
-        public string GetCurrentAlt()
-        {
-            return ViewModel.GetCurrentAlt();
-        }
         #endregion
 
         #region utility
