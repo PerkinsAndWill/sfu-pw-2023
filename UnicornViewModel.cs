@@ -344,16 +344,19 @@ namespace DPredict.ViewModels
 
         DateTime lastRequestDate;
 
-        internal Task SaveCurrentAlt(string name, bool isAutomatedSave)
+        internal Task SaveCurrentAlt(string name, bool isAutomatedSave, bool registerAsCurrent=false)
         {
             // isAutomatedSave: determines if save current or save a copy
-            return SaveCustomViewAlt(currentAlternative.currentObjectsGuids, currentAlternative.zone, name, isAutomatedSave);
+            return SaveCustomViewAlt(currentAlternative.currentObjectsGuids, currentAlternative.zone, name, isAutomatedSave, registerAsCurrent);
         }
 
         private RhinoView customView = null;
         private RhinoView userView = null;
         internal void InitViews()
         {
+            userView = null;
+            customView = null;
+            parametricanalysisView = null;
             RhinoDoc doc = RhinoDoc.ActiveDoc;
 
             // Store current view
@@ -664,7 +667,7 @@ namespace DPredict.ViewModels
         }
 
 
-        async internal void LoadAltAsCurrent(string name, bool compute = true, string subfolder = "", bool overwrite = false)
+        async internal void LoadAltAsCurrent(string name, bool compute = true, string subfolder = "", bool overwriteLoaded = false)
         {
 
             string fileToLoad = Path.Combine(Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), subfolder), name + ".json");
@@ -676,8 +679,8 @@ namespace DPredict.ViewModels
                 Alternative.Clear(currentAlternative, doc);
                 if (!Alternative.Relink(alternative, doc))
                 {
-                    RhinoApp.WriteLine(String.Format("Attention: One or more geometries could not be loaded into the project. Aborted loading alt No {0}",
-                        alternative.data["num"]));
+                    RhinoApp.WriteLine(String.Format("Attention: One or more geometries could not be loaded into the project. " +
+                        "Aborted loading alternative '{0}' (id:{1})", alternative.data["name"], alternative.data["num"]));
 
                     // abort
                     Alternative.Clear(alternative, doc);
@@ -690,11 +693,9 @@ namespace DPredict.ViewModels
                 }
                 RhinoApp.WriteLine(String.Format("Loaded alternative '{0}' (id:{1})", alternative.data["name"], alternative.data["num"]));
                 currentAlternative = alternative;
-                if (!overwrite)
-                {
-                    currentAlternative.data["num"] = num;
-                    currentAlternative.data["name"] = "";
-                }
+                if (!overwriteLoaded) currentAlternative.data["num"] = num;
+                if (currentAlternative.data["name"].ToString()=="autoSave") currentAlternative.data["name"] = "";
+
                 UnicornPlugin.UIInterop.SetUniqueSessionAltNum(currentAlternative.data["num"].ToString());
 
                 Curve geometry = alternative.zone;
@@ -724,7 +725,6 @@ namespace DPredict.ViewModels
                 UnicornPlugin.UIInterop.UpdateUIData("isContextSet",
                     alternative.context != null && alternative.context.Where(x => x != null).Count() > 0);
 
-                UnicornPlugin.UIInterop.UpdateInputsData(currentAlternative.data);
                 try
                 {
                     IEnumerable<string> lines = File.ReadLines(currentAlternative.data["weather_file"].ToString());
@@ -741,10 +741,15 @@ namespace DPredict.ViewModels
                 {
                     RhinoApp.WriteLine("Failed loading epw file: {0}", ex.Message);
                 }
-                if (compute)
+                if (!compute)
                 {
-                    await UpdateData(currentAlternative, "ready", true, false, true, false);
+                    currentAlternative.data["enable_energy"] = false;
+                    currentAlternative.data["enable_daylight"] = false;
                 }
+                UnicornPlugin.UIInterop.UpdateInputsData(currentAlternative.data);
+
+                await UpdateData(currentAlternative, "ready", true, false, true, false);
+
             }
             else
             {
@@ -856,12 +861,13 @@ namespace DPredict.ViewModels
             RhinoDoc.SelectObjects += OnSelectObjects;
             RhinoDoc.DeselectAllObjects += DeselectAllObjects;
             RhinoDoc.DeselectObjects += OnSelectObjects;
-            RhinoDoc.EndOpenDocument += InitDoc;
             RhinoDoc.CloseDocument += ResetDPredict;
-            RhinoDoc.EndOpenDocumentInitialViewUpdate += (sender, e) => { InitViews(); };
+            RhinoDoc.EndOpenDocumentInitialViewUpdate += (sender, e) => { InitViews(); InitDoc(sender, e); };
             RhinoDoc.BeginSaveDocument += (sender, e) => { TempClearClippingPlance(); };
-            RhinoDoc.EndSaveDocument += (sender, e) => { RestoreClippingPlane(); };
-            RhinoDoc.EndSaveDocument += LogCurrentAlt;
+            RhinoDoc.EndSaveDocument += (sender, e) => { 
+                RestoreClippingPlane(); 
+                LogCurrentAlt(sender, e); 
+            };
             RhinoApp.Closing += CloseExcelAndDelete;
             Rhino.UI.Panels.Show += OnShowPanel;
 
@@ -896,9 +902,9 @@ namespace DPredict.ViewModels
             InitEpcSpreadsheet();
         }
 
-        private void LogCurrentAlt(object sender, DocumentSaveEventArgs e)
+        private async void LogCurrentAlt(object sender, DocumentSaveEventArgs e)
         {
-            SaveCustomViewAlt(currentAlternative.currentObjectsGuids, currentAlternative.zone, "autoSave", isAutomatedSave: false, registerAsCurrent: true);
+            SaveCurrentAlt("autoSave", isAutomatedSave: false, registerAsCurrent: true);
         }
 
         private void LogAltAsCurrent(Alternative alternative)
@@ -939,11 +945,10 @@ namespace DPredict.ViewModels
 
         private void RelinkCurrentAlt()
         {
-            string filePath = GetLastSavedFile();
-            if (filePath != null) {
-                currentAlternative = new Alternative();
-                SaveCurrentAlt(currentAlternative.data["name"].ToString(), true);
-                LoadAltAsCurrent(Path.GetFileName(filePath).Replace(".json", ""), compute: false, subfolder: "", overwrite: false);
+            string altID = GetLastSavedFile();
+            if (altID != null) {
+                LoadAltAsCurrent(altID, compute: false, subfolder: "", overwriteLoaded: true);
+                //SaveCurrentAlt(currentAlternative.data["name"].ToString(), true);
             }
         }
 
@@ -1047,7 +1052,6 @@ namespace DPredict.ViewModels
         private void InitDoc(object sender, DocumentOpenEventArgs e)
         {
             currentAlternative = new Alternative();
-
             // point to correct dirs
             string localDataDir = null;
             if (e.FileName != null && !e.FileName.Contains("AppData") && !e.FileName.Contains("Template"))
@@ -1056,17 +1060,12 @@ namespace DPredict.ViewModels
             }
             UnicornPlugin.Instance.UpdateDataPath(localDataDir);
 
-            if (localDataDir != null)
+            if (localDataDir != null && Directory.Exists(localDataDir))
             {
                 // load working alt file
                 RelinkCurrentAlt();
             }
             UnicornPlugin.UIInterop.UpdateAlts();
-        }
-
-        internal void InitDataOnView()
-        {
-            currentAlternative = new Alternative();
         }
 
         internal void SetContext(List<GeometryBase> geometries)
@@ -2112,6 +2111,7 @@ namespace DPredict.ViewModels
             string definitionPath = Path.Combine(p, definitionName);
 
             List<GrasshopperDataTree> trees = new List<GrasshopperDataTree>();
+            #region data preparation
             List<string> altKeys = alt.data.Keys.ToList();
             for (int i = 0; i < altKeys.Count; i++)
             {
@@ -2180,6 +2180,7 @@ namespace DPredict.ViewModels
                 param1.Add("0", lst);
                 trees.Add(param1);
             }
+            #endregion
 
             try
             {
@@ -2224,7 +2225,7 @@ namespace DPredict.ViewModels
 
                     List<Guid> addedObjectsguids = CollectResults(result, ref alt, true, Guid.Empty);  
 
-                    //Setting all the objects created from Rhino Compute as non-selectable and non-changable i.e. locked.
+                    //Setting all the objects created from Rhino Compute to the assigned layer.
                     addedObjectsguids.ForEach(id =>
                     {
                         RhinoObject o = doc.Objects.Find(id);
@@ -2240,12 +2241,6 @@ namespace DPredict.ViewModels
 
                     });
 
-
-                    if (resultsLayer != null)
-                    {
-                        //   resultsLayer.IsLocked = true;
-                    }
-
                     SwitchDaylightMesh(alt.currentDaylightMeshIndex, alt);
 
                     doc.Layers.Modify(resultsLayer, layerIndex, true);
@@ -2254,7 +2249,6 @@ namespace DPredict.ViewModels
                     if (clippingState) Clip(clippingState);
 
                     await SaveCurrentAlt(currentAlternative.data["name"].ToString(), true);
-                    //doc.Views.Redraw();
                     UnicornPlugin.UIInterop.UpdateCurrentAlt();  
 
 
