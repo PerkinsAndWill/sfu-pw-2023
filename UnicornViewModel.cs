@@ -630,10 +630,6 @@ namespace DPredict.ViewModels
                         if (!isAutomatedSave) // save as a copy
                         {
                             currentAlternative.data["num"] = Alternative.RandomHexString(5);
-                            if (registerAsCurrent)
-                            {
-                                LogAltAsCurrent(currentAlternative);
-                            }
                         }
                         currentAlternative.data["name"] = name;
                         currentAlternative.timestamp = DateTime.Now.ToString();
@@ -644,6 +640,11 @@ namespace DPredict.ViewModels
                         string altFileName = currentAlternative.data["num"].ToString();
                         string combined = Path.Combine(savingFolder, altFileName + ".json");
                         File.WriteAllText(combined, json);
+
+                        if (registerAsCurrent)
+                        {
+                            LogAltAsCurrent(currentAlternative);
+                        }
 
                         // restore original number, reset name
                         currentAlternative.data["num"] = number;
@@ -741,14 +742,17 @@ namespace DPredict.ViewModels
                 {
                     RhinoApp.WriteLine("Failed loading epw file: {0}", ex.Message);
                 }
+
                 if (!compute)
                 {
                     currentAlternative.data["enable_energy"] = false;
                     currentAlternative.data["enable_daylight"] = false;
                 }
+                else
+                {
+                    await UpdateData(currentAlternative, "ready", true, false, true, false);
+                }
                 UnicornPlugin.UIInterop.UpdateInputsData(currentAlternative.data);
-
-                await UpdateData(currentAlternative, "ready", true, false, true, false);
 
             }
             else
@@ -811,15 +815,9 @@ namespace DPredict.ViewModels
         {
             IOrderedEnumerable<string> altFiles = Directory.GetFiles(UnicornPlugin.Instance.GetDataFolderPath(), "*.json")
                 .Where(file => { Alternative alt = LoadAlt(file, relink: false); return alt.data["name"].ToString() != "autoSave"; })
-                .OrderByDescending(d => new FileInfo(d).CreationTime);
+                .OrderByDescending(d => new FileInfo(d).LastWriteTime);
             return "[" + String.Join(",", altFiles.Select(fn => File.ReadAllText(fn))) + "]";
         }
-        internal string GetCurrentAlt()
-        {
-            string[] altFiles = Directory.GetFiles(UnicornPlugin.Instance.GetDataFolderPath(), "current.json");
-            return String.Join("", altFiles.Select(fn => File.ReadAllText(fn)));
-        }
-
 
         internal object DeserializeData(string key, string value)
         {
@@ -904,6 +902,7 @@ namespace DPredict.ViewModels
 
         private async void LogCurrentAlt(object sender, DocumentSaveEventArgs e)
         {
+
             SaveCurrentAlt("autoSave", isAutomatedSave: false, registerAsCurrent: true);
         }
 
@@ -948,7 +947,6 @@ namespace DPredict.ViewModels
             string altID = GetLastSavedFile();
             if (altID != null) {
                 LoadAltAsCurrent(altID, compute: false, subfolder: "", overwriteLoaded: true);
-                //SaveCurrentAlt(currentAlternative.data["name"].ToString(), true);
             }
         }
 
