@@ -29,6 +29,7 @@ using Rhino.Render.ChangeQueue;
 using System.Xml.Linq;
 using CefSharp.Handler;
 using System.Reflection;
+using CefSharp;
 
 namespace DPredict.ViewModels
 {
@@ -668,13 +669,13 @@ namespace DPredict.ViewModels
         }
 
 
-        async internal void LoadAltAsCurrent(string name, bool compute = true, string subfolder = "", bool overwriteLoaded = false)
+        async internal void LoadAltAsCurrent(string name, bool compute = true, string subfolder = "", bool overWriteCurrent = true)
         {
 
             string fileToLoad = Path.Combine(Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), subfolder), name + ".json");
             if (File.Exists(fileToLoad))
             {
-                Alternative alternative = LoadAlt(fileToLoad, relink: true);
+                Alternative alternative = LoadAlt(fileToLoad);
                 RhinoDoc doc = RhinoDoc.ActiveDoc;
                 string num = currentAlternative.data["num"].ToString();
                 Alternative.Clear(currentAlternative, doc);
@@ -694,7 +695,7 @@ namespace DPredict.ViewModels
                 }
                 RhinoApp.WriteLine(String.Format("Loaded alternative '{0}' (id:{1})", alternative.data["name"], alternative.data["num"]));
                 currentAlternative = alternative;
-                if (!overwriteLoaded) currentAlternative.data["num"] = num;
+                if (overWriteCurrent) currentAlternative.data["num"] = num;
                 if (currentAlternative.data["name"].ToString()=="autoSave") currentAlternative.data["name"] = "";
 
                 UnicornPlugin.UIInterop.SetUniqueSessionAltNum(currentAlternative.data["num"].ToString());
@@ -760,7 +761,7 @@ namespace DPredict.ViewModels
                 //TODO error notification : file not found
             }
         }
-        internal Alternative LoadAlt(string filepath, bool relink)
+        internal Alternative LoadAlt(string filepath)
         {
             string json = File.ReadAllText(filepath);
             Alternative alternative = JsonConvert.DeserializeObject<Alternative>(json, GeometryResolver.Settings);
@@ -814,7 +815,7 @@ namespace DPredict.ViewModels
         internal string GetAlts()
         {
             IOrderedEnumerable<string> altFiles = Directory.GetFiles(UnicornPlugin.Instance.GetDataFolderPath(), "*.json")
-                .Where(file => { Alternative alt = LoadAlt(file, relink: false); return alt.data["name"].ToString() != "autoSave"; })
+                .Where(file => { Alternative alt = LoadAlt(file); return alt.data["name"].ToString() != "autoSave"; })
                 .OrderByDescending(d => new FileInfo(d).LastWriteTime);
             return "[" + String.Join(",", altFiles.Select(fn => File.ReadAllText(fn))) + "]";
         }
@@ -928,7 +929,7 @@ namespace DPredict.ViewModels
             }
         }
 
-        public static string GetLastSavedFile()
+        public static string GetRegisteredAltID()
         {
             string num = null;
             string logPath = Path.Combine(UnicornPlugin.Instance.GetDataFolderPath(), "currentID.txt");
@@ -942,12 +943,34 @@ namespace DPredict.ViewModels
             return num;
         }
 
-        private void RelinkCurrentAlt()
+        private async void RelinkCurrentAlt()
         {
-            string altID = GetLastSavedFile();
-            if (altID != null) {
-                LoadAltAsCurrent(altID, compute: false, subfolder: "", overwriteLoaded: true);
-            }
+            await Task.Run(() =>
+            {
+                string altID = GetRegisteredAltID();
+                if (altID != null)
+                {
+                    int waitCycles = 0;
+                    while (!UnicornPlugin.UIInterop.Browser.CanExecuteJavascriptInMainFrame && waitCycles < 10)
+                    {
+                        System.Threading.Thread.Sleep(500);
+                        waitCycles++;
+                    }
+                    // load working alt file. requires access to browser/UI
+                    if (UnicornPlugin.UIInterop.Browser.CanExecuteJavascriptInMainFrame)
+                    {
+                        LoadAltAsCurrent(altID, compute: false, subfolder: "", overWriteCurrent: true);
+                        UnicornPlugin.UIInterop.UpdateAlts();
+                    }
+                    else
+                    {
+                        RhinoApp.InvokeOnUiThread((Action)delegate
+                        {
+                            RhinoApp.WriteLine("Failed to link alternative because operation timed out.");
+                        });
+                    }
+                }
+            });
         }
 
         private void ResetDPredict(object sender, DocumentEventArgs e)
@@ -1060,10 +1083,8 @@ namespace DPredict.ViewModels
 
             if (localDataDir != null && Directory.Exists(localDataDir))
             {
-                // load working alt file
                 RelinkCurrentAlt();
             }
-            UnicornPlugin.UIInterop.UpdateAlts();
         }
 
         internal void SetContext(List<GeometryBase> geometries)
