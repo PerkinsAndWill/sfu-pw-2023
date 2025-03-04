@@ -2404,9 +2404,6 @@
             async updateCurrentAlt() {
                 if (window.Interop) {
                     this.updateAlts();
-                    //var currentStoredAlt = JSON.parse(await window.Interop.getCurrentAlt());
-                    //const index = this.alts.indexOf((x) => x.data.isCurrent);
-                    //this.alts.splice(index, 1, currentStoredAlt);
                 }
             },
             onSelectAllCheckboxChange() {

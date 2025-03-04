@@ -259,7 +259,7 @@ namespace DPredict
         }
         public void LoadAlt(string name, string subfolder = "")
         {
-            ViewModel.LoadAltAsCurrent(name, subfolder);
+            ViewModel.LoadAltAsCurrent(name, compute:true, subfolder);
         }
 
         public void DeleteAlt(string name)
@@ -277,10 +277,6 @@ namespace DPredict
             return JsonConvert.SerializeObject(ViewModel.GetAnalysisFolders(), jsonSettings);
         }
 
-        public string GetCurrentAlt()
-        {
-            return ViewModel.GetCurrentAlt();
-        }
         #endregion
 
         #region utility
