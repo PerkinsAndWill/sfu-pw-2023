@@ -506,7 +506,7 @@ namespace DPredict.ViewModels
                     RhinoApp.InvokeAndWait(delegate
                     {
                         RhinoDoc doc = RhinoDoc.ActiveDoc;
-                        IEnumerable<RhinoObject> objects = objectGuids.Select(guid => doc.Objects.Find(guid));
+                        IEnumerable<RhinoObject> objects = objectGuids.Select(guid => doc.Objects.FindId(guid));
 
                         List<RhinoObject> objectsLst = objects.Where(obj => obj != null).ToList();
 
@@ -1813,6 +1813,7 @@ namespace DPredict.ViewModels
             int num = 0;
             int daylightMeshIndex = currentAlternative.currentDaylightMeshIndex;
             Alternative benchmark = CloneAlt(currentAlternative);
+            Alternative.Relink(benchmark, RhinoDoc.ActiveDoc);
             foreach (Dictionary<string, string> sample in samples)
             {
                 if (!isParametricAnalysisRunning)
@@ -1945,12 +1946,12 @@ namespace DPredict.ViewModels
                         // add context guids as duplicate geometry
                         ObjectAttributes attributes = new ObjectAttributes();
                         attributes.ViewportId = parametricanalysisView.ActiveViewportID;
-                        guids.AddRange(currentAlternative.context.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
+                        guids.AddRange(benchmark.context.Select(geom => geom==null? Guid.Empty : doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
                         guids.AddRange(benchmark.additionalBuildingGeometry.Select(geom => doc.Objects.Add(geom.Duplicate(), attributes)).ToList());
 
                         SwitchDaylightMesh(daylightMeshIndex, benchmark).Wait();
 
-                        List<Guid> visibleGuids = guids.Select(id => doc.Objects.Find(id)).Where(obj => obj != null).Where(obj => !obj.IsHidden).Select(obj => obj.Id).ToList();
+                        List<Guid> visibleGuids = guids.Select(id => doc.Objects.FindId(id)).Where(obj => obj != null).Where(obj => !obj.IsHidden).Select(obj => obj.Id).ToList();
                         double height = benchmark.data["floor_to_floor"] is double ? (double)benchmark.data["floor_to_floor"] : 3.2;
 
                         SaveObjectsAndImage(visibleGuids, benchmark, height, altName, analysisSubfolder, true).Wait();
